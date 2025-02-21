@@ -10,3 +10,4 @@ protobuf==4.25.2
 Werkzeug==3.0.1
 Flask-CORS==4.0.0
 watchdog==6.0.0
+marshmallow==3.26.1
