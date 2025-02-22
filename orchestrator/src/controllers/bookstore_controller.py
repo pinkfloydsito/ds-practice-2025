@@ -2,8 +2,9 @@ from flask import Blueprint, request, jsonify
 from marshmallow import ValidationError
 from schema import *
 import uuid
+import requests
 
-# XXX: Change this: Mock database for demonstration
+
 suggested_books_db = [
     {"bookId": "book1", "title": "The Great Gatsby", "author": "F. Scott Fitzgerald"},
     {"bookId": "book2", "title": "1984", "author": "George Orwell"},
@@ -20,7 +21,6 @@ def checkout():
         schema = CheckoutRequestSchema()
         data = schema.load(request.json)
 
-        # Validate terms and conditions
         if not data["termsAndConditionsAccepted"]:
             return jsonify(
                 {
@@ -31,9 +31,8 @@ def checkout():
                 }
             ), 400
 
-        # Process payment
-        # payment_successful = process_payment(data['creditCard'])
-
+        # payment_successful = process_payment(data['user'])
+        
         # if payment_successful:
         #     # Generate order response
         #     response = {
@@ -50,13 +49,11 @@ def checkout():
         #         "suggestedBooks": []
         #     }
         #     return jsonify(OrderStatusResponseSchema().dump(response))
-
         response = {
-            "orderId": str(uuid.uuid4()),
-            "status": "Order Approved",
-            "suggestedBooks": suggested_books_db[:2],  # Return 2 suggested books
-        }
-
+                "orderId": str(uuid.uuid4()),
+                "status": "Order Approved",
+                "suggestedBooks": suggested_books_db[:2]  # Return 2 suggested books
+            }
         return jsonify(OrderStatusResponseSchema().dump(response))
 
     except ValidationError as err:
@@ -73,3 +70,41 @@ def checkout():
                 }
             }
         ), 500
+
+def process_payment(user):
+    """Handles the payment by calling the /transfer API."""
+    try:
+        transfer_payload = {
+            "sender": {
+                "name": "Bookstore Inc.",
+                "accountNumber": "111122223333"
+            },
+            "recipient": {
+                "name": user['name'],
+                "accountNumber": "444455556666" 
+            },
+            "amount": 10000,
+            "currency": "USD",
+            "paymentMethod": "Credit Card",
+            "transferNote": "Book purchase",
+            "notificationPreferences": ["Email"],
+            "device": {"type": "Desktop", "model": "PC", "os": "Windows 11"},
+            "browser": {"name": "Chrome", "version": "118.0"},
+            "appVersion": "1.0.0",
+            "screenResolution": "1920x1080",
+            "referrer": "Bookstore Website",
+            "deviceLanguage": "en-US"
+        }
+
+        response = requests.post("http://localhost:8081/transfer", json=transfer_payload)
+
+        if response.status_code == 200:
+            transfer_data = response.json()
+            return transfer_data["status"] == "Transfer Approved"
+        else:
+            print(f"Transfer API failed with status code: {response.status_code}")
+            return False
+
+    except Exception as e:
+        print(f"Error processing payment: {e}")
+        return False
