@@ -31,20 +31,24 @@ def greet(name="you"):
 # For more information, see https://flask.palletsprojects.com/en/latest/
 from flask import Flask, request
 from flask_cors import CORS
-import json
-
 
 def create_app():
     app = Flask(__name__)
 
-    # Import and register blueprints/controllers
-    from controllers.bookstore_controller import bookstore_bp
+    # ✅ List of blueprints
+    blueprints = [
+        ("controllers.bookstore_controller", "bookstore_bp"),
+        ("controllers.fintech_controller", "fintech_bp"),
+    ]
 
-    app.register_blueprint(bookstore_bp)
+    # Dynamically import and register blueprints
+    for module_path, bp_name in blueprints:
+        module = __import__(module_path, fromlist=[bp_name])
+        blueprint = getattr(module, bp_name)
+        app.register_blueprint(blueprint)
 
-    # Register error handlers
+    # ✅ Register error handlers
     from error_handlers import register_error_handlers
-
     register_error_handlers(app)
 
     return app
@@ -66,29 +70,6 @@ def index():
     response = greet(name=username)
     # Return the response.
     return response
-
-
-# @app.route("/checkout", methods=["POST"])
-# def checkout():
-#     """
-#     Responds with a JSON object containing the order ID, status, and suggested books.
-#     """
-#     # Get request object data to json
-#     request_data = json.loads(request.data)
-#     # Print request object data
-#     print("Request Data:", request_data.get("items"))
-#
-#     # Dummy response following the provided YAML specification for the bookstore
-#     order_status_response = {
-#         "orderId": "12345",
-#         "status": "Order Approved",
-#         "suggestedBooks": [
-#             {"bookId": "123", "title": "The Best Book", "author": "Author 1"},
-#             {"bookId": "456", "title": "The Second Best Book", "author": "Author 2"},
-#         ],
-#     }
-#
-#     return order_status_response
 
 
 if __name__ == "__main__":

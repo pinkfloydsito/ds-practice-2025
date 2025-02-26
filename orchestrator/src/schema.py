@@ -72,3 +72,41 @@ class OrderStatusResponseSchema(Schema):
 
 class ErrorResponseSchema(Schema):
     error = fields.Dict(keys=fields.Str(), values=fields.Str())
+
+
+class SenderRecipientSchema(Schema):
+    name = fields.String(required=True)
+    accountNumber = fields.String(required=True)
+
+
+class BrowserSchema(Schema):
+    name = fields.String(required=True)
+    version = fields.String(required=True)
+
+
+class TransferRequestSchema(Schema):
+    sender = fields.Nested(SenderRecipientSchema, required=True)
+    recipient = fields.Nested(SenderRecipientSchema, required=True)
+    amount = fields.Float(required=True)
+    currency = fields.String(required=True)
+    paymentMethod = fields.String(required=True)
+    transferNote = fields.String(required=False)
+    notificationPreferences = fields.List(fields.String(), required=False)
+    device = fields.Nested(DeviceSchema, required=True)
+    browser = fields.Nested(BrowserSchema, required=True)
+    appVersion = fields.String(required=True)
+    screenResolution = fields.String(required=False)
+    referrer = fields.String(required=False)
+    deviceLanguage = fields.String(required=False)
+
+
+class SuggestedProductSchema(Schema):
+    productId = fields.String()
+    title = fields.String()
+
+class TransferStatusResponseSchema(Schema):
+    transactionId = fields.String()
+    status = fields.String()
+    suggestedProducts = fields.List(fields.Nested(SuggestedProductSchema))
+
+    
