@@ -57,3 +57,19 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+  suggestions:
+    build:
+      context: ./
+      dockerfile: ./suggestions/Dockerfile
+    ports:
+      - 50053:50053
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      - PYTHONFILE=/app/suggestions/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      - ./suggestions/src:/app/suggestions/src
