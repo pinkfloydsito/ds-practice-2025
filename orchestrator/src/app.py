@@ -1,36 +1,77 @@
 import sys
 import os
 
+import grpc
+import logging
+
+from flask import Flask, request
+from flask_cors import CORS
+
+from google.protobuf.json_format import MessageToDict, MessageToJson
+from grpc_client_factory import GrpcClientFactory
+
+
 # This set of lines are needed to import the gRPC stubs.
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
-FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-fraud_detection_grpc_path = os.path.abspath(
-    os.path.join(FILE, "../../../utils/pb/fraud_detection")
-)
-sys.path.insert(0, fraud_detection_grpc_path)
+
+microservices = ["fraud_detection", "suggestions"]
+
+for microservice in microservices:
+    FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+    grpc_path = os.path.abspath(os.path.join(FILE, f"../../../utils/pb/{microservice}"))
+    sys.path.insert(0, grpc_path)
+
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
-import grpc
+import suggestions_pb2 as suggestions
+import suggestions_pb2_grpc as suggestions_grpc
+
+client_factory = GrpcClientFactory()
+
+
+def get_suggestions():
+    try:
+        stub = client_factory.get_stub(
+            "suggestions", suggestions_grpc.BookSuggestionStub, secure=False
+        )
+
+        response = stub.GetSuggestions(
+            suggestions.RecommendationRequest(
+                user_id="1",
+                limit=3,
+                book_tokens=["horror", "jane austen"],
+            ),
+            timeout=client_factory.default_timeout,
+        )
+
+        response_dict = MessageToDict(response)
+
+        return response_dict.get("recommendations", [])
+    except grpc.RpcError as e:
+        print(e)
+        logging.error(f"gRPC error: {e.code()}: {e.details()}")
+        raise
 
 
 def greet(name="you"):
-    # Establish a connection with the fraud-detection gRPC service.
-    with grpc.insecure_channel("fraud_detection:50051") as channel:
-        # Create a stub object.
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
-        # Call the service through the stub object.
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
+    try:
+        # Get the appropriate stub
+        stub = client_factory.get_stub(
+            "fraud_detection", fraud_detection_grpc.HelloServiceStub, secure=False
+        )
 
+        # Make the call with timeout
+        response = stub.SayHello(
+            fraud_detection.HelloRequest(name=name),
+            timeout=client_factory.default_timeout,
+        )
+        return response.greeting
+    except grpc.RpcError as e:
+        logging.error(f"gRPC error: {e.code()}: {e.details()}")
+        raise
 
-# Import Flask.
-# Flask is a web framework for Python.
-# It allows you to build a web application quickly.
-# For more information, see https://flask.palletsprojects.com/en/latest/
-from flask import Flask, request
-from flask_cors import CORS
 
 def create_app():
     app = Flask(__name__)
@@ -49,6 +90,7 @@ def create_app():
 
     # ✅ Register error handlers
     from error_handlers import register_error_handlers
+
     register_error_handlers(app)
 
     return app
@@ -68,8 +110,10 @@ def index():
     # Test the fraud-detection gRPC service.
     username = request.args.get("name") or "other"
     response = greet(name=username)
-    # Return the response.
-    return response
+
+    recommendations = get_suggestions()
+
+    return {"recommendations": recommendations, "message": response}
 
 
 if __name__ == "__main__":
