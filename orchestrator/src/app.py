@@ -15,7 +15,7 @@ from grpc_client_factory import GrpcClientFactory
 # The path of the stubs is relative to the current file, or absolute inside the container.
 # Change these lines only if strictly needed.
 
-microservices = ["fraud_detection", "suggestions"]
+microservices = ["fraud_detection"]
 
 for microservice in microservices:
     FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -24,35 +24,6 @@ for microservice in microservices:
 
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
-
-import suggestions_pb2 as suggestions
-import suggestions_pb2_grpc as suggestions_grpc
-
-client_factory = GrpcClientFactory()
-
-
-def get_suggestions():
-    try:
-        stub = client_factory.get_stub(
-            "suggestions", suggestions_grpc.BookSuggestionStub, secure=False
-        )
-
-        response = stub.GetSuggestions(
-            suggestions.RecommendationRequest(
-                user_id="1",
-                limit=3,
-                book_tokens=["horror", "jane austen"],
-            ),
-            timeout=client_factory.default_timeout,
-        )
-
-        response_dict = MessageToDict(response)
-
-        return response_dict.get("recommendations", [])
-    except grpc.RpcError as e:
-        print(e)
-        logging.error(f"gRPC error: {e.code()}: {e.details()}")
-        raise
 
 
 def greet(name="you"):
@@ -75,6 +46,7 @@ def greet(name="you"):
 
 def create_app():
     app = Flask(__name__)
+    app.grpc_factory = GrpcClientFactory()
 
     # ✅ List of blueprints
     blueprints = [

@@ -12,3 +12,7 @@ Flask-CORS==4.0.0
 watchdog==6.0.0
 marshmallow==3.26.1
 requests==2.31.0
+pgvector==0.3.6
+SQLAlchemy==2.0.38
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1

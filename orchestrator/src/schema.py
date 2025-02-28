@@ -103,10 +103,11 @@ class TransferRequestSchema(Schema):
 class SuggestedProductSchema(Schema):
     productId = fields.String()
     title = fields.String()
+    author = fields.String()
+
 
 class TransferStatusResponseSchema(Schema):
     transactionId = fields.String()
     status = fields.String()
     suggestedProducts = fields.List(fields.Nested(SuggestedProductSchema))
 
-    
