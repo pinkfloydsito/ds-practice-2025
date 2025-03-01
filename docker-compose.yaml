@@ -14,6 +14,8 @@ services:
       # Mount the frontend directory
       - ./frontend/src:/usr/share/nginx/html
   orchestrator:
+    env_file:
+      - .env
     build:
       # Use the current directory as the build context
       # This allows us to access the files in the current directory inside the Dockerfile
@@ -36,6 +38,8 @@ services:
       # Mount the orchestrator/src directory in the current directory to the /app/orchestrator/src directory in the container
       - ./orchestrator/src:/app/orchestrator/src
   fraud_detection:
+    env_file:
+      - .env
     build:
       # Use the current directory as the build context
       # This allows us to access the files in the current directory inside the Dockerfile
@@ -57,3 +61,34 @@ services:
       - ./utils:/app/utils
       # Mount the fraud_detection/src directory in the current directory to the /app/fraud_detection/src directory in the container
       - ./fraud_detection/src:/app/fraud_detection/src
+  suggestions:
+    build:
+      context: ./
+      dockerfile: ./suggestions/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - 50053:50053
+    environment:
+      # Pass the environment variables to the container
+      # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
+      - PYTHONUNBUFFERED=TRUE
+      # The PYTHONFILE environment variable specifies the absolute entry point of the application
+      - PYTHONFILE=/app/suggestions/src/app.py
+    volumes:
+      # Mount the utils directory in the current directory to the /app/utils directory in the container
+      - ./utils:/app/utils
+      - ./suggestions/src:/app/suggestions/src
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./db/Dockerfile
+    image: bookstore_postgres
+    container_name: bookstore_postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
