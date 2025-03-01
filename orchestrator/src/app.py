@@ -4,10 +4,9 @@ import os
 import grpc
 import logging
 
-from flask import Flask, request
+from flask import Flask, request, current_app
 from flask_cors import CORS
 
-from google.protobuf.json_format import MessageToDict, MessageToJson
 from grpc_client_factory import GrpcClientFactory
 
 
@@ -26,17 +25,17 @@ import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 
-def greet(name="you"):
+def greet(grpc_factory, name="you"):
     try:
         # Get the appropriate stub
-        stub = client_factory.get_stub(
+        stub = grpc_factory.get_stub(
             "fraud_detection", fraud_detection_grpc.HelloServiceStub, secure=False
         )
 
         # Make the call with timeout
         response = stub.SayHello(
             fraud_detection.HelloRequest(name=name),
-            timeout=client_factory.default_timeout,
+            timeout=grpc_factory.default_timeout,
         )
         return response.greeting
     except grpc.RpcError as e:
@@ -80,12 +79,11 @@ def index():
     Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
     """
     # Test the fraud-detection gRPC service.
+    grpc_factory = current_app.grpc_factory
     username = request.args.get("name") or "other"
-    response = greet(name=username)
+    response = greet(grpc_factory, name=username)
 
-    recommendations = get_suggestions()
-
-    return {"recommendations": recommendations, "message": response}
+    return response
 
 
 if __name__ == "__main__":
