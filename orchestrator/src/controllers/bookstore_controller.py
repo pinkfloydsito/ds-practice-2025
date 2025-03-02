@@ -98,9 +98,18 @@ def checkout():
         return jsonify(OrderStatusResponseSchema().dump(response))
 
     except ValidationError as err:
-        return jsonify(
-            {"error": {"code": "VALIDATION_ERROR", "message": str(err.messages)}}
-        ), 400
+    # If your frontend expects an 'error' key with a 'message':
+        return jsonify({
+        "error": {
+            "code": "ORDER_REJECTED",
+            "message": ", ".join(
+                f"{field}: {msg}"
+                for field, messages in err.messages.items()
+                for msg in messages
+            )
+        }
+    }), 400
+
     except Exception as e:
         print(e)
         return jsonify(

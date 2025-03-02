@@ -43,6 +43,7 @@ class GrpcClientFactory:
         service_config = {
             "fraud_detection": "fraud_detection:50051",
             "suggestions": "suggestions:50053",
+            "transaction_verification": "transaction_verification:50052",
         }
 
         if service_name not in service_config:

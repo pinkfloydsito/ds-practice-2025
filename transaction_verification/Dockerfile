@@ -1,3 +1,4 @@
+# Start with a Python base image
 # Use an official Python runtime as the base image
 FROM python:3.11
 
@@ -12,4 +13,4 @@ COPY ./suggestions/requirements.txt .
 RUN pip install --no-cache-dir --default-timeout=300 -r requirements.txt
 
 # Set the command to run the application
-CMD python utils/other/hotreload.py "suggestions/src/app.py"
+CMD python utils/other/hotreload.py "transaction_verification/src/app.py"
