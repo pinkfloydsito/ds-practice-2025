@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package transaction_verification;
+
+// The service definition
+service TransactionVerificationService {
+  // A simple RPC to verify transaction details
+  rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+}
+
+// Request message
+message TransactionRequest {
+  string creditCardNumber = 1;
+  string expiryDate = 2; // format: "MM/YY" or "MM/YYYY"
+  // You could add more fields as needed (e.g., card holder, CVV, etc.)
+}
+
+// Response message
+message TransactionResponse {
+  bool isValid = 1;
+  string reason = 2; // e.g. "Invalid credit card length"
+}
