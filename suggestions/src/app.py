@@ -23,9 +23,26 @@ from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
-model_name = os.getenv("MODEL_NAME", "all-MiniLM-L6-v2")
+import os
+from sentence_transformers import SentenceTransformer
+from sentence_transformers import util
 
-model = SentenceTransformer(model_name)
+model_name = os.getenv("MODEL_NAME", "all-MiniLM-L6-v2")
+model_path = "/app/ai/models/sentence-transformer"
+
+try:
+    model = SentenceTransformer(model_path)
+    print(f"Model loaded from local path: {model_path}")
+except:
+    # If loading fails download model
+    print(f"Model not found locally. Downloading {model_name}...")
+
+    # Create directory if it doesn't exist
+    os.makedirs(model_path, exist_ok=True)
+
+    model = SentenceTransformer(model_name)
+    model.save(model_path)
+    print(f"Model downloaded and saved to {model_path}")
 
 
 def find_similar_books(tokens: List[str], top_n=5):
