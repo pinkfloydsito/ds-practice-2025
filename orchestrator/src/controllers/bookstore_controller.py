@@ -10,8 +10,11 @@ from google.protobuf.json_format import MessageToDict
 from typing import List
 from sqlalchemy.orm import sessionmaker
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-microservices = ["suggestions"]
+
+microservices = ["suggestions", "transaction_verification"]
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 for microservice in microservices:
@@ -26,6 +29,9 @@ sys.path.insert(0, models_path)
 from book import Book, engine
 import suggestions_pb2 as suggestions
 import suggestions_pb2_grpc as suggestions_grpc
+
+import transaction_verification_pb2 as transaction_verification
+import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 
 def get_suggestions(grpc_factory, book_tokens: List[str]):
@@ -64,6 +70,31 @@ def get_suggestions(grpc_factory, book_tokens: List[str]):
         raise
 
 
+def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
+    try:
+        stub = grpc_factory.get_stub(
+            "transaction_verification",
+            transaction_verification_grpc.TransactionVerificationServiceStub,
+            secure=False,
+        )
+
+        request = transaction_verification.TransactionRequest(
+            creditCardNumber=credit_card,
+            expiryDate=expiry_date,
+        )
+
+        response = stub.VerifyTransaction(request, timeout=grpc_factory.default_timeout)
+
+        response_dict = MessageToDict(response)
+
+        return response_dict
+
+    except grpc.RpcError as e:
+        print(e)
+        print(f"gRPC error: {e.code()}: {e.details()}")
+        raise
+
+
 bookstore_bp = Blueprint("bookstore", __name__)
 
 
@@ -88,27 +119,79 @@ def checkout():
         books = data.get("items", [])
 
         books_tokens = [book["name"] for book in books]
+
+        credit_card_number = data.get("creditCard", {}).get("number")
+        expiration_date = data.get("creditCard", {}).get("expirationDate")
+
         recommendations = get_suggestions(grpc_factory, books_tokens)
+        verification_result = None
+        suggestions_result = None
+        error = None
+
+        def verify_transaction_worker():
+            nonlocal verification_result, error
+            try:
+                print(f"Starting verification for transaction: {credit_card_number}")
+                verification_result = verify_transaction(
+                    grpc_factory, credit_card_number, expiration_date
+                )
+                print(f"Verification completed with result: {verification_result}")
+            except Exception as e:
+                error = f"Verification error: {str(e)}"
+                print(error)
+
+        def suggestions_worker():
+            nonlocal suggestions_result, error
+            try:
+                print("Starting suggestions retrieval")
+                suggestions_result = get_suggestions(grpc_factory, books_tokens)
+                print(
+                    f"Retrieved {len(suggestions_result) if suggestions_result else 0} suggestions"
+                )
+            except Exception as e:
+                error = f"Suggestions error: {str(e)}"
+                print(error)
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            verify_transaction_job = executor.submit(verify_transaction_worker)
+            suggestions_job = executor.submit(suggestions_worker)
+
+            for future in as_completed([verify_transaction_job, suggestions_job]):
+                pass
+        if not (verification_result and verification_result.get("isValid", False)):
+            return jsonify(
+                {
+                    "error": {
+                        "code": "ORDER_REJECTED",
+                        "message": verification_result.get(
+                            "reason", "Error verifying transaction"
+                        ),
+                    }
+                }
+            ), 400
 
         response = {
             "orderId": str(uuid.uuid4()),
             "status": "Order Approved",
             "suggestedBooks": recommendations,
         }
+
         return jsonify(OrderStatusResponseSchema().dump(response))
 
     except ValidationError as err:
-    # If your frontend expects an 'error' key with a 'message':
-        return jsonify({
-        "error": {
-            "code": "ORDER_REJECTED",
-            "message": ", ".join(
-                f"{field}: {msg}"
-                for field, messages in err.messages.items()
-                for msg in messages
-            )
-        }
-    }), 400
+        # If your frontend expects an 'error' key with a 'message':
+        return jsonify(
+            {
+                "error": {
+                    "code": "ORDER_REJECTED",
+                    "message": ", ".join(
+                        f"{field}: {msg}"
+                        for field, messages in err.messages.items()
+                        for msg in messages
+                    ),
+                }
+            }
+        ), 400
 
     except Exception as e:
         print(e)

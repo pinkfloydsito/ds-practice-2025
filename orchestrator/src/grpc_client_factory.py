@@ -1,6 +1,8 @@
 import grpc
 import logging
 
+LOGGER = logging.getLogger(__name__)
+
 
 class GrpcClientFactory:
     def __init__(self):
@@ -18,7 +20,8 @@ class GrpcClientFactory:
             service_id = f"{service_name}:{host}:{port}"
 
         # Create the channel if it doesn't exist or is shutdown
-        if service_id not in self._channels:
+        # if service_id not in self._channels: XXX: Check how to fix this crap
+        if True:
             address = (
                 host
                 and port
@@ -32,9 +35,32 @@ class GrpcClientFactory:
             else:
                 self._channels[service_id] = grpc.insecure_channel(address)
 
-            logging.info(f"Created new gRPC channel for {service_id}")
+            # LOGGER.info(f"Created new gRPC channel for {service_id}")
+            print(f"Created new gRPC channel for {service_id}")
+
+        # XXX: need to bump the version of grpc probably
+        if self._is_channel_unhealthy(self._channels[service_id]):
+            # LOGGER.warning(f"Channel for {service_id} is unhealthy. Recreating...")
+            print("Channel for {service_id} is unhealthy. Recreating...")
+            self._channels[service_id] = self._channels[service_id].close()
+            self._channels[service_id] = self.get_channel(
+                service_name, host, port, secure
+            )
 
         return self._channels[service_id]
+
+    def _is_channel_unhealthy(self, channel):
+        # print(dir(channel))
+        #         print(channel._connectivity_state in [1, 4])
+        #   print(channel._connectivity_state)
+        #    print(grpc.ChannelConnectivity.SHUTDOWN)
+        #   return channel.get_state(try_to_connect=False) in [
+        #      grpc.ChannelConnectivity.SHUTDOWN,
+        #      grpc.ChannelConnectivity.TRANSIENT_FAILURE,
+        #      grpc.ChannelConnectivity.SHUTDOWN,
+        # ]
+
+        return False
 
     def _get_service_address(self, service_name):
         """Get service address from configuration or service discovery"""

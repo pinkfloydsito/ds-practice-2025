@@ -79,6 +79,7 @@ services:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
       - ./suggestions/src:/app/suggestions/src
+      - ./ai/models:/app/ai/models/
 
   postgres:
     build:
