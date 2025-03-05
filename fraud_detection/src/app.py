@@ -16,15 +16,20 @@ import fraud_detection_pb2_grpc as fd_pb2_grpc
 
 logging.basicConfig(level=logging.INFO)
 
+
 class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
     """
     Checks:
     1. If user_name is in a known blocklist (5 names).
     2. If user_email ends with .ru suffix.
     """
-    BLOCKED_NAMES = {"alex", "john", "maria", "anna", "ivan"}  
+
+    BLOCKED_NAMES = {"alex", "john", "maria", "anna", "ivan"}
 
     def CheckFraud(self, request, context):
+        print(
+            f"[FraudDetection] CheckFraud request: user_name={request.user_name}, user_email={request.user_email}"
+        )
         user_name = request.user_name.strip().lower()
         user_email = request.user_email.strip().lower()
 
@@ -42,8 +47,8 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
                 is_fraudulent = True
                 reason = f"Email '{request.user_email}' ends with .ru"
 
-        logging.info(
-            f"[FraudDetection] user_name={request.user_name}, user_email={request.user_email}, "
+        print(
+            f"[FraudDetection Result] user_name={request.user_name}, user_email={request.user_email}, "
             f"is_fraudulent={is_fraudulent}, reason={reason}"
         )
 
@@ -52,16 +57,16 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    fd_pb2_grpc.add_FraudDetectionServiceServicer_to_server(FraudDetectionService(), server)
+    fd_pb2_grpc.add_FraudDetectionServiceServicer_to_server(
+        FraudDetectionService(), server
+    )
     port = "50051"
     server.add_insecure_port(f"[::]:{port}")
     server.start()
     logging.info(f"Fraud Detection service listening on port {port}")
-    try:
-        while True:
-            time.sleep(86400)
-    except KeyboardInterrupt:
-        server.stop(0)
+
+    # Keep thread alive
+    server.wait_for_termination()
 
 
 if __name__ == "__main__":
