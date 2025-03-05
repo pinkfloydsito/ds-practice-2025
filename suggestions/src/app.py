@@ -90,6 +90,7 @@ class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
         response = book_suggestion.RecommendationResponse()
         response.recommendations.extend(recommendations)
 
+        print(f"Suggestions result: {response}")
         return response
 
 

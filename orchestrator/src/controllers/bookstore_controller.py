@@ -123,7 +123,6 @@ def checkout():
         credit_card_number = data.get("creditCard", {}).get("number")
         expiration_date = data.get("creditCard", {}).get("expirationDate")
 
-        recommendations = get_suggestions(grpc_factory, books_tokens)
         verification_result = None
         suggestions_result = None
         error = None
@@ -173,7 +172,7 @@ def checkout():
         response = {
             "orderId": str(uuid.uuid4()),
             "status": "Order Approved",
-            "suggestedBooks": recommendations,
+            "suggestedBooks": suggestions_result,
         }
 
         return jsonify(OrderStatusResponseSchema().dump(response))
