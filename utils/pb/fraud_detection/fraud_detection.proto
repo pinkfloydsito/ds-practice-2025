@@ -1,15 +1,23 @@
 syntax = "proto3";
 
-package hello;
 
-service HelloService {
-    rpc SayHello (HelloRequest) returns (HelloResponse);
+package fraud_detection;
+
+// The FraudDetectionService definition.
+service FraudDetectionService {
+    // Single RPC call to check if a request is fraudulent
+    rpc CheckFraud (FraudRequest) returns (FraudResponse);
 }
 
-message HelloRequest {
-    string name = 1;
+// The request message for fraud checks
+message FraudRequest {
+    string user_name = 1;
+    string user_email = 2;
+    
 }
 
-message HelloResponse {
-    string greeting = 1;
+// The response message
+message FraudResponse {
+    bool is_fraudulent = 1;
+    string reason = 2; // optional explanation
 }

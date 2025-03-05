@@ -14,7 +14,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-microservices = ["suggestions", "transaction_verification"]
+microservices = ["suggestions", "transaction_verification","fraud_detection"]
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 for microservice in microservices:
@@ -32,6 +32,9 @@ import suggestions_pb2_grpc as suggestions_grpc
 
 import transaction_verification_pb2 as transaction_verification
 import transaction_verification_pb2_grpc as transaction_verification_grpc
+
+import fraud_detection_pb2 as fraud_pb2
+import fraud_detection_pb2_grpc as fraud_pb2_grpc
 
 
 def get_suggestions(grpc_factory, book_tokens: List[str]):
@@ -94,6 +97,36 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
         print(f"gRPC error: {e.code()}: {e.details()}")
         raise
 
+def check_fraud(grpc_factory, user_name: str, user_email: str):
+    """
+    Calls the FraudDetectionService.CheckFraud RPC,
+    passing a user name and user email.
+    """
+    try:
+        # Acquire a stub for the 'fraud_detection' microservice.
+        stub = grpc_factory.get_stub(
+            "fraud_detection",
+            fraud_pb2_grpc.FraudDetectionServiceStub,
+            secure=False,
+        )
+
+        # Build the request object (fields depend on your .proto definition)
+        request = fraud_pb2.FraudRequest(
+            user_name=user_name,
+            user_email=user_email,
+        )
+
+        # Make the gRPC call with a timeout
+        response = stub.CheckFraud(request, timeout=grpc_factory.default_timeout)
+
+        # Convert to a dictionary for convenience
+        response_dict = MessageToDict(response)
+        return response_dict  # e.g. { "isFraudulent": True/False, "reason": "..." }
+
+    except grpc.RpcError as e:
+        print(e)
+        print(f"gRPC error: {e.code()}: {e.details()}")
+        raise
 
 bookstore_bp = Blueprint("bookstore", __name__)
 
