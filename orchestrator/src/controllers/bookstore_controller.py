@@ -14,7 +14,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-microservices = ["suggestions", "transaction_verification","fraud_detection"]
+microservices = ["suggestions", "transaction_verification", "fraud_detection"]
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 for microservice in microservices:
@@ -97,6 +97,7 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
         print(f"gRPC error: {e.code()}: {e.details()}")
         raise
 
+
 def check_fraud(grpc_factory, user_name: str, user_email: str):
     """
     Calls the FraudDetectionService.CheckFraud RPC,
@@ -128,6 +129,7 @@ def check_fraud(grpc_factory, user_name: str, user_email: str):
         print(f"gRPC error: {e.code()}: {e.details()}")
         raise
 
+
 bookstore_bp = Blueprint("bookstore", __name__)
 
 
@@ -158,10 +160,12 @@ def checkout():
 
         verification_result = None
         suggestions_result = None
-        error = None
+        fraud_detection_result = None
+
+        errors = []
 
         def verify_transaction_worker():
-            nonlocal verification_result, error
+            nonlocal verification_result, errors
             try:
                 print(f"Starting verification for transaction: {credit_card_number}")
                 verification_result = verify_transaction(
@@ -170,10 +174,13 @@ def checkout():
                 print(f"Verification completed with result: {verification_result}")
             except Exception as e:
                 error = f"Verification error: {str(e)}"
+
+                errors.append(error)
+
                 print(error)
 
         def suggestions_worker():
-            nonlocal suggestions_result, error
+            nonlocal suggestions_result, errors
             try:
                 print("Starting suggestions retrieval")
                 suggestions_result = get_suggestions(grpc_factory, books_tokens)
@@ -182,14 +189,48 @@ def checkout():
                 )
             except Exception as e:
                 error = f"Suggestions error: {str(e)}"
+                errors.append(error)
+
+                print(error)
+
+        def fraud_detection_worker():
+            nonlocal fraud_detection_result, errors
+            try:
+                print("Starting fraud_detection analysis")
+                fraud_detection_result = check_fraud(
+                    grpc_factory, data["user"]["name"], data["user"]["contact"]
+                )
+                print(
+                    f"Fraud detection completed with result: {fraud_detection_result}"
+                )
+            except Exception as e:
+                error = f"Fraud detection error: {str(e)}"
+                errors.append(error)
+
                 print(error)
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             verify_transaction_job = executor.submit(verify_transaction_worker)
             suggestions_job = executor.submit(suggestions_worker)
+            fraud_detection_job = executor.submit(fraud_detection_worker)
 
-            for future in as_completed([verify_transaction_job, suggestions_job]):
+            for future in as_completed(
+                [verify_transaction_job, suggestions_job, fraud_detection_job]
+            ):
                 pass
+
+        if fraud_detection_result and fraud_detection_result.get("isFraudulent", False):
+            return jsonify(
+                {
+                    "error": {
+                        "code": "ORDER_REJECTED",
+                        "message": fraud_detection_result.get(
+                            "reason", "Fraudulent transaction"
+                        ),
+                    }
+                }
+            ), 400
+
         if not (verification_result and verification_result.get("isValid", False)):
             return jsonify(
                 {

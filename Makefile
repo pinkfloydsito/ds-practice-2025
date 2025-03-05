@@ -16,4 +16,4 @@ test_bookstore_post:
 	  -H 'sec-ch-ua: "Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"' \
 	  -H 'sec-ch-ua-mobile: ?0' \
 	  -H 'sec-ch-ua-platform: "macOS"' \
-	  --data-raw '{"user":{"name":"John Doe","contact":"john.doe@example.com"},"creditCard":{"number":"6011111111111117","expirationDate":"12/95","cvv":"123"},"userComment":"Please handle with care.","items":[{"name":"Book A","quantity":1},{"name":"Book B","quantity":2}],"billingAddress":{"street":"123 Main St","city":"Springfield","state":"IL","zip":"62701","country":"USA"},"shippingMethod":"Standard","giftWrapping":true,"termsAndConditionsAccepted":true}'
+	  --data-raw '{"user":{"name":"John Doe","contact":"john.doe@example.ru"},"creditCard":{"number":"6011111111111117","expirationDate":"12/95","cvv":"123"},"userComment":"Please handle with care.","items":[{"name":"Book A","quantity":1},{"name":"Book B","quantity":2}],"billingAddress":{"street":"123 Main St","city":"Springfield","state":"IL","zip":"62701","country":"USA"},"shippingMethod":"Standard","giftWrapping":true,"termsAndConditionsAccepted":true}'
