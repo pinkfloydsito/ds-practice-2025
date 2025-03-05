@@ -112,6 +112,7 @@ class TransactionVerificationServiceServicer(
 
                 pass
 
+        print(f"Transaction Verification result: {is_valid}, reason: {reason}")
         return transaction_verification_pb2.TransactionResponse(
             isValid=is_valid, reason=reason
         )
