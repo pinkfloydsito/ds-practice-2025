@@ -25,9 +25,8 @@ if _version_not_supported:
     )
 
 
-class FraudDetectionServiceStub(object):
-    """The FraudDetectionService definition.
-    """
+class FraudDetectionStub(object):
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -36,25 +35,23 @@ class FraudDetectionServiceStub(object):
             channel: A grpc.Channel.
         """
         self.CheckFraud = channel.unary_unary(
-                '/fraud_detection.FraudDetectionService/CheckFraud',
+                '/fraud.FraudDetection/CheckFraud',
                 request_serializer=fraud__detection__pb2.FraudRequest.SerializeToString,
                 response_deserializer=fraud__detection__pb2.FraudResponse.FromString,
                 _registered_method=True)
 
 
-class FraudDetectionServiceServicer(object):
-    """The FraudDetectionService definition.
-    """
+class FraudDetectionServicer(object):
+    """Missing associated documentation comment in .proto file."""
 
     def CheckFraud(self, request, context):
-        """Single RPC call to check if a request is fraudulent
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_FraudDetectionServiceServicer_to_server(servicer, server):
+def add_FraudDetectionServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'CheckFraud': grpc.unary_unary_rpc_method_handler(
                     servicer.CheckFraud,
@@ -63,15 +60,14 @@ def add_FraudDetectionServiceServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'fraud_detection.FraudDetectionService', rpc_method_handlers)
+            'fraud.FraudDetection', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('fraud_detection.FraudDetectionService', rpc_method_handlers)
+    server.add_registered_method_handlers('fraud.FraudDetection', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class FraudDetectionService(object):
-    """The FraudDetectionService definition.
-    """
+class FraudDetection(object):
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def CheckFraud(request,
@@ -87,7 +83,7 @@ class FraudDetectionService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/fraud_detection.FraudDetectionService/CheckFraud',
+            '/fraud.FraudDetection/CheckFraud',
             fraud__detection__pb2.FraudRequest.SerializeToString,
             fraud__detection__pb2.FraudResponse.FromString,
             options,
