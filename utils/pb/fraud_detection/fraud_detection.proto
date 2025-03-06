@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package fraud;
+package fraud_Detection;  
 
 service FraudDetection {
     rpc CheckFraud (FraudRequest) returns (FraudResponse);

@@ -24,17 +24,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x05\x66raud\"k\n\x0c\x46raudRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06\x61mount\x18\x03 \x01(\x01\x12\x16\n\x0epayment_method\x18\x04 \x01(\t\x12\x10\n\x08location\x18\x05 \x01(\t\"6\n\rFraudResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2I\n\x0e\x46raudDetection\x12\x37\n\nCheckFraud\x12\x13.fraud.FraudRequest\x1a\x14.fraud.FraudResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x66raud_detection.proto\x12\x0f\x66raud_Detection\"k\n\x0c\x46raudRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x0e\n\x06\x61mount\x18\x03 \x01(\x01\x12\x16\n\x0epayment_method\x18\x04 \x01(\t\x12\x10\n\x08location\x18\x05 \x01(\t\"6\n\rFraudResponse\x12\x15\n\ris_fraudulent\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2]\n\x0e\x46raudDetection\x12K\n\nCheckFraud\x12\x1d.fraud_Detection.FraudRequest\x1a\x1e.fraud_Detection.FraudResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'fraud_detection_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_FRAUDREQUEST']._serialized_start=32
-  _globals['_FRAUDREQUEST']._serialized_end=139
-  _globals['_FRAUDRESPONSE']._serialized_start=141
-  _globals['_FRAUDRESPONSE']._serialized_end=195
-  _globals['_FRAUDDETECTION']._serialized_start=197
-  _globals['_FRAUDDETECTION']._serialized_end=270
+  _globals['_FRAUDREQUEST']._serialized_start=42
+  _globals['_FRAUDREQUEST']._serialized_end=149
+  _globals['_FRAUDRESPONSE']._serialized_start=151
+  _globals['_FRAUDRESPONSE']._serialized_end=205
+  _globals['_FRAUDDETECTION']._serialized_start=207
+  _globals['_FRAUDDETECTION']._serialized_end=300
 # @@protoc_insertion_point(module_scope)
