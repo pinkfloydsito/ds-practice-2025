@@ -1,10 +1,15 @@
 import logging
+import random
 import sys
 import os
 import grpc
 import time
 import re
 from concurrent import futures
+import pandas as pd
+
+import joblib
+
 
 # Insert the stubs path so we can import the generated modules
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -16,6 +21,8 @@ import fraud_detection_pb2_grpc as fd_pb2_grpc
 
 logging.basicConfig(level=logging.INFO)
 
+model = joblib.load("fraud_model.pkl")
+label_encoders = joblib.load("label_encoders.pkl")
 
 class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
     """
@@ -30,29 +37,23 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
         print(
             f"[FraudDetection] CheckFraud request: user_name={request.user_name}, user_email={request.user_email}"
         )
-        user_name = request.user_name.strip().lower()
-        user_email = request.user_email.strip().lower()
+        payment_method = label_encoders["payment_method"].transform([request.payment_method])[0] \
+            if request.payment_method in label_encoders["payment_method"].classes_ else -1
+        
+        location = label_encoders["location"].transform([request.location])[0] \
+            if request.location in label_encoders["location"].classes_ else -1
 
-        is_fraudulent = False
-        reason = ""
+        # Prepare input for prediction
+        features = pd.DataFrame([[request.amount, payment_method, location]],
+                                columns=["amount", "payment_method", "location"])
 
-        # Check if name is in the blocklist
-        if user_name in self.BLOCKED_NAMES:
-            is_fraudulent = True
-            reason = f"Name '{request.user_name}' is on the fraud list."
+        # Make prediction
+        prediction = model.predict(features)[0]
+        probability = model.predict_proba(features)[0][1] 
 
-        # Check if email ends with .ru
-        if not is_fraudulent:  # Only check if not already flagged
-            if user_email.endswith(".ru"):
-                is_fraudulent = True
-                reason = f"Email '{request.user_email}' ends with .ru"
-
-        print(
-            f"[FraudDetection Result] user_name={request.user_name}, user_email={request.user_email}, "
-            f"is_fraudulent={is_fraudulent}, reason={reason}"
-        )
-
-        return fd_pb2.FraudResponse(is_fraudulent=is_fraudulent, reason=reason)
+        reason = "AI Model Prediction" if prediction == 1 else "Transaction is safe"
+        
+        return fd_pb2.FraudResponse(is_fraudulent=bool(prediction), reason=reason)
 
 
 def serve():
