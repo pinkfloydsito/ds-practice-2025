@@ -5,12 +5,18 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class FraudRequest(_message.Message):
-    __slots__ = ("user_name", "user_email")
-    USER_NAME_FIELD_NUMBER: _ClassVar[int]
-    USER_EMAIL_FIELD_NUMBER: _ClassVar[int]
-    user_name: str
-    user_email: str
-    def __init__(self, user_name: _Optional[str] = ..., user_email: _Optional[str] = ...) -> None: ...
+    __slots__ = ("order_id", "user_id", "amount", "payment_method", "location")
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    AMOUNT_FIELD_NUMBER: _ClassVar[int]
+    PAYMENT_METHOD_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    user_id: str
+    amount: float
+    payment_method: str
+    location: str
+    def __init__(self, order_id: _Optional[str] = ..., user_id: _Optional[str] = ..., amount: _Optional[float] = ..., payment_method: _Optional[str] = ..., location: _Optional[str] = ...) -> None: ...
 
 class FraudResponse(_message.Message):
     __slots__ = ("is_fraudulent", "reason")

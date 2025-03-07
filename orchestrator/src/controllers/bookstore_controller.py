@@ -113,16 +113,23 @@ def check_fraud(grpc_factory, user_name: str, user_email: str):
 
         # Build the request object (fields depend on your .proto definition)
         request = fraud_pb2.FraudRequest(
-            user_name=user_name,
-            user_email=user_email,
+            order_id="",
+            user_id="",
+            amount=5000,
+            location="Russia",
+            payment_method="Credit Card",
         )
 
         # Make the gRPC call with a timeout
         response = stub.CheckFraud(request, timeout=grpc_factory.default_timeout)
 
         # Convert to a dictionary for convenience
-        response_dict = MessageToDict(response)
-        return response_dict  # e.g. { "isFraudulent": True/False, "reason": "..." }
+        response_dict = MessageToDict(
+            response,
+            preserving_proto_field_name=True,
+            always_print_fields_with_no_presence=True,
+        )
+        return response_dict  # e.g. { "is_fraudulent": True/False, "reason": "..." }
 
     except grpc.RpcError as e:
         print(e)
@@ -219,7 +226,9 @@ def checkout():
             ):
                 pass
 
-        if fraud_detection_result and fraud_detection_result.get("isFraudulent", False):
+        if fraud_detection_result and fraud_detection_result.get(
+            "is_fraudulent", False
+        ):
             return jsonify(
                 {
                     "error": {
