@@ -10,7 +10,6 @@ import pandas as pd
 
 import joblib
 
-
 # Insert the stubs path so we can import the generated modules
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 grpc_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
@@ -19,10 +18,27 @@ sys.path.insert(0, grpc_path)
 import fraud_detection_pb2 as fd_pb2
 import fraud_detection_pb2_grpc as fd_pb2_grpc
 
-logging.basicConfig(level=logging.INFO)
 
-model = joblib.load("fraud_model.pkl")
-label_encoders = joblib.load("label_encoders.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "fraud_model.pkl")
+
+if not os.path.exists(MODEL_PATH):
+    print(f"ERROR: fraud_model.pkl is missing at {MODEL_PATH}")
+    exit(1)
+
+print(f"Loading model from: {MODEL_PATH}")
+model = joblib.load(MODEL_PATH)
+
+LABEL_ENCODERS = os.path.join(os.path.dirname(__file__), "label_encoders.pkl")
+if not os.path.exists(LABEL_ENCODERS):
+    print(f"ERROR: label_encoders.pkl is missing at {LABEL_ENCODERS}")
+    exit(1)
+
+print(f"Loading encoders from: {LABEL_ENCODERS}")
+
+label_encoders = joblib.load(LABEL_ENCODERS)
+
+
+logging.basicConfig(level=logging.INFO)
 
 class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
     """
