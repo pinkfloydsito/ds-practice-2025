@@ -1,23 +1,25 @@
 syntax = "proto3";
 
+import "google/protobuf/struct.proto";
 
-package fraud_detection;
+package fraud_Detection;  
 
-// The FraudDetectionService definition.
 service FraudDetectionService {
-    // Single RPC call to check if a request is fraudulent
     rpc CheckFraud (FraudRequest) returns (FraudResponse);
 }
 
-// The request message for fraud checks
 message FraudRequest {
-    string user_name = 1;
-    string user_email = 2;
-    
+    double amount = 1;
+    string ip_address = 2;
+    string email = 3;
+    string billing_country = 4;
+    string billing_city = 5;
+    string payment_method = 6;
 }
 
-// The response message
 message FraudResponse {
-    bool is_fraudulent = 1;
-    string reason = 2; // optional explanation
+    double fraud_probability = 1;
+    string action = 2;
+  google.protobuf.Struct details = 3;  // This allows for arbitrary JSON structure
+  repeated string reasons = 4;
 }

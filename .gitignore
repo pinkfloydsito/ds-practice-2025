@@ -3,3 +3,4 @@ __pycache__
 books.csv
 postgres_data/
 ai/
+.vscode/

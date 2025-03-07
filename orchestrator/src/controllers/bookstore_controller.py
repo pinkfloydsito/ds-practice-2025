@@ -98,7 +98,15 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
         raise
 
 
-def check_fraud(grpc_factory, user_name: str, user_email: str):
+def check_fraud(
+    grpc_factory,
+    amount: float,
+    ip_address: str,
+    email: str,
+    billing_country: str,
+    billing_city: str,
+    payment_method: str,
+):
     """
     Calls the FraudDetectionService.CheckFraud RPC,
     passing a user name and user email.
@@ -113,16 +121,24 @@ def check_fraud(grpc_factory, user_name: str, user_email: str):
 
         # Build the request object (fields depend on your .proto definition)
         request = fraud_pb2.FraudRequest(
-            user_name=user_name,
-            user_email=user_email,
+            amount=amount,
+            ip_address=ip_address,
+            email=email,
+            billing_country=billing_country,
+            billing_city=billing_city,
+            payment_method=payment_method,
         )
 
         # Make the gRPC call with a timeout
         response = stub.CheckFraud(request, timeout=grpc_factory.default_timeout)
 
         # Convert to a dictionary for convenience
-        response_dict = MessageToDict(response)
-        return response_dict  # e.g. { "isFraudulent": True/False, "reason": "..." }
+        response_dict = MessageToDict(
+            response,
+            preserving_proto_field_name=True,
+            always_print_fields_with_no_presence=True,
+        )
+        return response_dict  # e.g. { "is_fraudulent": True/False, "reason": "..." }
 
     except grpc.RpcError as e:
         print(e)
@@ -157,6 +173,15 @@ def checkout():
 
         credit_card_number = data.get("creditCard", {}).get("number")
         expiration_date = data.get("creditCard", {}).get("expirationDate")
+
+        payment_method = "Credit Card"
+
+        amount = sum(book.get("price", 10) for book in books)
+        ip_address = request.remote_addr or ""
+        # ip_address = "5.45.198.12"
+        email = data.get("user", {}).get("contact", "")
+        billing_country = data["billingAddress"]["country"]
+        billing_city = data["billingAddress"]["city"]
 
         verification_result = None
         suggestions_result = None
@@ -198,7 +223,13 @@ def checkout():
             try:
                 print("Starting fraud_detection analysis")
                 fraud_detection_result = check_fraud(
-                    grpc_factory, data["user"]["name"], data["user"]["contact"]
+                    grpc_factory,
+                    amount=amount,
+                    ip_address=ip_address,
+                    email=email,
+                    billing_country=billing_country,
+                    billing_city=billing_city,
+                    payment_method=payment_method,
                 )
                 print(
                     f"Fraud detection completed with result: {fraud_detection_result}"
@@ -219,13 +250,21 @@ def checkout():
             ):
                 pass
 
-        if fraud_detection_result and fraud_detection_result.get("isFraudulent", False):
+        if (
+            fraud_detection_result
+            and fraud_detection_result.get("action", "APPROVE") == "REJECT"
+        ):
+            details = fraud_detection_result.get("details", {})
+            for key, value in details.items():
+                if key in ["ip_country", "ip_country_mismatch"]:
+                    errors.append(f"Fraud detection: {key} - {value}")
+                    print(errors)
             return jsonify(
                 {
                     "error": {
                         "code": "ORDER_REJECTED",
                         "message": fraud_detection_result.get(
-                            "reason", "Fraudulent transaction"
+                            "reasons", "Fraudulent transaction"
                         ),
                     }
                 }
