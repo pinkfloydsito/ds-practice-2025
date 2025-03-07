@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/struct.proto";
+
 package fraud_Detection;  
 
 service FraudDetectionService {
@@ -7,14 +9,17 @@ service FraudDetectionService {
 }
 
 message FraudRequest {
-    string order_id = 1;
-    string user_id = 2;
-    double amount = 3;
-    string payment_method = 4;
-    string location = 5;
+    double amount = 1;
+    string ip_address = 2;
+    string email = 3;
+    string billing_country = 4;
+    string billing_city = 5;
+    string payment_method = 6;
 }
 
 message FraudResponse {
-    bool is_fraudulent = 1;
-    string reason = 2;
+    double fraud_probability = 1;
+    string action = 2;
+  google.protobuf.Struct details = 3;  // This allows for arbitrary JSON structure
+  repeated string reasons = 4;
 }
