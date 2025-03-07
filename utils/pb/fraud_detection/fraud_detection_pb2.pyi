@@ -1,27 +1,35 @@
+from google.protobuf import struct_pb2 as _struct_pb2
+from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Optional as _Optional
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class FraudRequest(_message.Message):
-    __slots__ = ("order_id", "user_id", "amount", "payment_method", "location")
-    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
-    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("amount", "ip_address", "email", "billing_country", "billing_city", "payment_method")
     AMOUNT_FIELD_NUMBER: _ClassVar[int]
+    IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    EMAIL_FIELD_NUMBER: _ClassVar[int]
+    BILLING_COUNTRY_FIELD_NUMBER: _ClassVar[int]
+    BILLING_CITY_FIELD_NUMBER: _ClassVar[int]
     PAYMENT_METHOD_FIELD_NUMBER: _ClassVar[int]
-    LOCATION_FIELD_NUMBER: _ClassVar[int]
-    order_id: str
-    user_id: str
     amount: float
+    ip_address: str
+    email: str
+    billing_country: str
+    billing_city: str
     payment_method: str
-    location: str
-    def __init__(self, order_id: _Optional[str] = ..., user_id: _Optional[str] = ..., amount: _Optional[float] = ..., payment_method: _Optional[str] = ..., location: _Optional[str] = ...) -> None: ...
+    def __init__(self, amount: _Optional[float] = ..., ip_address: _Optional[str] = ..., email: _Optional[str] = ..., billing_country: _Optional[str] = ..., billing_city: _Optional[str] = ..., payment_method: _Optional[str] = ...) -> None: ...
 
 class FraudResponse(_message.Message):
-    __slots__ = ("is_fraudulent", "reason")
-    IS_FRAUDULENT_FIELD_NUMBER: _ClassVar[int]
-    REASON_FIELD_NUMBER: _ClassVar[int]
-    is_fraudulent: bool
-    reason: str
-    def __init__(self, is_fraudulent: bool = ..., reason: _Optional[str] = ...) -> None: ...
+    __slots__ = ("fraud_probability", "action", "details", "reasons")
+    FRAUD_PROBABILITY_FIELD_NUMBER: _ClassVar[int]
+    ACTION_FIELD_NUMBER: _ClassVar[int]
+    DETAILS_FIELD_NUMBER: _ClassVar[int]
+    REASONS_FIELD_NUMBER: _ClassVar[int]
+    fraud_probability: float
+    action: str
+    details: _struct_pb2.Struct
+    reasons: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, fraud_probability: _Optional[float] = ..., action: _Optional[str] = ..., details: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., reasons: _Optional[_Iterable[str]] = ...) -> None: ...

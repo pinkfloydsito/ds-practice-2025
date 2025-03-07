@@ -79,11 +79,6 @@ class SenderRecipientSchema(Schema):
     accountNumber = fields.String(required=True)
 
 
-class BrowserSchema(Schema):
-    name = fields.String(required=True)
-    version = fields.String(required=True)
-
-
 class TransferRequestSchema(Schema):
     sender = fields.Nested(SenderRecipientSchema, required=True)
     recipient = fields.Nested(SenderRecipientSchema, required=True)
@@ -110,4 +105,3 @@ class TransferStatusResponseSchema(Schema):
     transactionId = fields.String()
     status = fields.String()
     suggestedProducts = fields.List(fields.Nested(SuggestedProductSchema))
-
