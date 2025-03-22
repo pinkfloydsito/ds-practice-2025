@@ -93,6 +93,8 @@ def predict_fraud(request, model, label_encoders, geoip_reader):
         }
     )
 
+    print(f"Inferencee - Input data: {input_data}")
+
     # 3. Transform categorical variables using saved encoders
     for col, le in label_encoders.items():
         if col in input_data.columns:

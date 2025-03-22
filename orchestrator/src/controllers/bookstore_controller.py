@@ -252,20 +252,19 @@ def checkout():
 
         if (
             fraud_detection_result
-            and fraud_detection_result.get("action", "APPROVE") == "REJECT"
+            and not fraud_detection_result.get("action", "REJECT") == "REJECT"
         ):
             details = fraud_detection_result.get("details", {})
             for key, value in details.items():
                 if key in ["ip_country", "ip_country_mismatch"]:
                     errors.append(f"Fraud detection: {key} - {value}")
-                    print(errors)
             return jsonify(
                 {
                     "error": {
                         "code": "ORDER_REJECTED",
                         "message": fraud_detection_result.get(
                             "reasons", "Fraudulent transaction"
-                        ),
+                        ).join(", "),
                     }
                 }
             ), 400
