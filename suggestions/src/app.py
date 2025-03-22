@@ -70,6 +70,7 @@ def find_similar_books(tokens: List[str], top_n=5):
 
 class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
     def GetSuggestions(self, request, context):
+        print(f"[Suggestions] Received request: {request}")
         tokens = request.book_tokens
         books = find_similar_books(tokens, request.limit)
 
@@ -90,7 +91,7 @@ class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
         response = book_suggestion.RecommendationResponse()
         response.recommendations.extend(recommendations)
 
-        print(f"Suggestions result: {response}")
+        print(f"[Suggestions] result: {books}")
         return response
 
 
