@@ -26,8 +26,7 @@ if _version_not_supported:
 
 
 class TransactionVerificationServiceStub(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
         """Constructor.
@@ -40,15 +39,24 @@ class TransactionVerificationServiceStub(object):
                 request_serializer=transaction__verification__pb2.TransactionRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.TransactionResponse.FromString,
                 _registered_method=True)
+        self.VerifyBooks = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/VerifyBooks',
+                request_serializer=transaction__verification__pb2.BooksRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.BooksResponse.FromString,
+                _registered_method=True)
 
 
 class TransactionVerificationServiceServicer(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
     def VerifyTransaction(self, request, context):
-        """A simple RPC to verify transaction details
-        """
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VerifyBooks(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -61,6 +69,11 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
                     request_deserializer=transaction__verification__pb2.TransactionRequest.FromString,
                     response_serializer=transaction__verification__pb2.TransactionResponse.SerializeToString,
             ),
+            'VerifyBooks': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyBooks,
+                    request_deserializer=transaction__verification__pb2.BooksRequest.FromString,
+                    response_serializer=transaction__verification__pb2.BooksResponse.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'transaction_verification.TransactionVerificationService', rpc_method_handlers)
@@ -70,8 +83,7 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class TransactionVerificationService(object):
-    """The service definition
-    """
+    """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def VerifyTransaction(request,
@@ -90,6 +102,33 @@ class TransactionVerificationService(object):
             '/transaction_verification.TransactionVerificationService/VerifyTransaction',
             transaction__verification__pb2.TransactionRequest.SerializeToString,
             transaction__verification__pb2.TransactionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def VerifyBooks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/VerifyBooks',
+            transaction__verification__pb2.BooksRequest.SerializeToString,
+            transaction__verification__pb2.BooksResponse.FromString,
             options,
             channel_credentials,
             insecure,

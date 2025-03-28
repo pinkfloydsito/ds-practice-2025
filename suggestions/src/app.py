@@ -69,6 +69,9 @@ def find_similar_books(tokens: List[str], top_n=5):
 
 
 class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
+    def __init__(self):
+        self.service_name = "book_suggestion"
+
     def GetSuggestions(self, request, context):
         print(f"[Suggestions] Received request: {request}")
         tokens = request.book_tokens

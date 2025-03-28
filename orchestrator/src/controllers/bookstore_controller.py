@@ -74,7 +74,9 @@ def get_suggestions(grpc_factory, book_tokens: List[str]):
         raise
 
 
-def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
+def verify_transaction(
+    grpc_factory, credit_card: str, expiry_date: str, vector_clock, order_id
+):
     try:
         stub = grpc_factory.get_stub(
             "transaction_verification",
@@ -85,9 +87,37 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
         request = transaction_verification.TransactionRequest(
             creditCardNumber=credit_card,
             expiryDate=expiry_date,
+            vectorClock=vector_clock,
+            orderId=order_id,
         )
 
         response = stub.VerifyTransaction(request, timeout=grpc_factory.default_timeout)
+
+        response_dict = MessageToDict(response)
+
+        return response_dict
+
+    except grpc.RpcError as e:
+        print(e)
+        print(f"gRPC error: {e.code()}: {e.details()}")
+        raise
+
+
+def verify_items(grpc_factory, books: list[str], vector_clock, order_id):
+    try:
+        stub = grpc_factory.get_stub(
+            "transaction_verification",
+            transaction_verification_grpc.TransactionVerificationServiceStub,
+            secure=False,
+        )
+
+        request = transaction_verification.BooksRequest(
+            books=books,
+            vectorClock=vector_clock,
+            orderId=order_id,
+        )
+
+        response = stub.VerifyBooks(request, timeout=grpc_factory.default_timeout)
 
         response_dict = MessageToDict(response)
 
@@ -153,6 +183,9 @@ bookstore_bp = Blueprint("bookstore", __name__)
 @bookstore_bp.route("/checkout", methods=["POST"])
 def checkout():
     grpc_factory = current_app.grpc_factory
+    event_tracker = current_app.event_tracker
+
+    print("Received checkout request")
     try:
         # Validate request data
         schema = CheckoutRequestSchema()
@@ -185,25 +218,92 @@ def checkout():
         billing_city = data["billingAddress"]["city"]
 
         verification_result = None
+        verification_items_result = None
         suggestions_result = None
         fraud_detection_result = None
+        order_id = str(uuid.uuid4())
+
+        print(f"Processing order: {order_id}")
+
+        event_tracker.initialize_order(order_id)
+
+        # initial clock
+        initial_clock = event_tracker.record_event(
+            order_id=order_id, service="orchestrator", event_name="checkout_started"
+        )
+
+        print(f"vector clock: {initial_clock}")
 
         errors = []
+        final_vector_clock = None
+
+        # Event execution flag to control flow instead of using locks and mutex
+        event_completed = {
+            "verify_items": threading.Event(),
+            # "verify_user_data": threading.Event(),
+            "verify_transaction": threading.Event(),
+            # "check_fraud": threading.Event(),
+            # "check_payment_fraud": threading.Event(),
+            # "generate_suggestions": threading.Event(),
+        }
+
+        def verify_items_worker():
+            nonlocal verification_items_result, errors
+            try:
+                print(f"Starting verification of books for order: {order_id}")
+
+                current_clock = event_tracker.get_clock(order_id, "orchestrator")
+
+                verification_items_result = verify_items(
+                    grpc_factory,
+                    books_tokens,
+                    vector_clock=current_clock,
+                    order_id=order_id,
+                )
+
+                event_tracker.record_event(
+                    order_id=order_id,
+                    service="orchestrator",
+                    event_name="items_verified",
+                    received_clock=dict(verification_items_result.vectorClock),
+                )
+
+                print(
+                    f"Verification of books completed with result: {verification_items_result}"
+                )
+
+            except Exception as e:
+                error = f"Verification error: {str(e)}"
+                errors.append(error)
+                print(error)
+            finally:
+                event_completed["verify_items"].set()
 
         def verify_transaction_worker():
             nonlocal verification_result, errors
+
+            # wait for the verification of the items
+            event_completed["verify_items"].wait()
+
             try:
                 print(f"Starting verification for transaction: {credit_card_number}")
+
+                current_clock = event_tracker.get_clock(order_id, "orchestrator")
+
                 verification_result = verify_transaction(
-                    grpc_factory, credit_card_number, expiration_date
+                    grpc_factory,
+                    credit_card_number,
+                    expiration_date,
+                    vector_clock=current_clock,
+                    order_id=order_id,
                 )
                 print(f"Verification completed with result: {verification_result}")
             except Exception as e:
                 error = f"Verification error: {str(e)}"
-
                 errors.append(error)
-
                 print(error)
+            finally:
+                event_completed["verify_transaction"].set()
 
         def suggestions_worker():
             nonlocal suggestions_result, errors
@@ -241,15 +341,22 @@ def checkout():
 
                 print(error)
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            verify_items_job = executor.submit(verify_items_worker)
             verify_transaction_job = executor.submit(verify_transaction_worker)
             suggestions_job = executor.submit(suggestions_worker)
             fraud_detection_job = executor.submit(fraud_detection_worker)
 
             for future in as_completed(
-                [verify_transaction_job, suggestions_job, fraud_detection_job]
+                [
+                    verify_items_job,
+                    verify_transaction_job,
+                    suggestions_job,
+                    fraud_detection_job,
+                ]
             ):
-                pass
+                if final_vector_clock:
+                    broadcast_clear_order(grpc_factory, order_id, final_vector_clock)
 
         if (
             fraud_detection_result
@@ -286,7 +393,7 @@ def checkout():
             ), 400
 
         response = {
-            "orderId": str(uuid.uuid4()),
+            "orderId": order_id,
             "status": "Order Approved",
             "suggestedBooks": suggestions_result,
         }
@@ -418,3 +525,41 @@ def list_books():
         ), 500
     finally:
         session.close()
+
+
+# Helper function to broadcast clear order command
+def broadcast_clear_order(grpc_factory, order_id, final_vector_clock):
+    """
+    Broadcast to all services to clear the order data
+    """
+    services = ["suggestions", "transaction_verification", "fraud_detection"]
+
+    for service_name in services:
+        try:
+            # Each service would need a ClearOrder gRPC method
+            service_module = globals().get(f"{service_name}_grpc")
+            stub_class = getattr(
+                service_module, f"{service_name.capitalize()}ServiceStub", None
+            )
+
+            if not stub_class:
+                print(f"Stub class not found for {service_name}")
+                continue
+
+            stub = grpc_factory.get_stub(service_name, stub_class, secure=False)
+
+            # Create appropriate request message
+            module = globals().get(service_name)
+            request_class = getattr(module, "ClearOrderRequest", None)
+
+            if not request_class:
+                print(f"Request class not found for {service_name}")
+                continue
+
+            request = request_class(orderId=order_id, vectorClock=final_vector_clock)
+
+            # Call the service
+            stub.ClearOrder(request, timeout=grpc_factory.default_timeout)
+
+        except Exception as e:
+            print(f"Error clearing order from {service_name}: {e}")

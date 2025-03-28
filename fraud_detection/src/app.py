@@ -124,6 +124,9 @@ def get_country_from_ip(ip_address, reader):
 
 
 class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
+    def __init__(self):
+        self.service_name = "fraud_detection"
+
     def CheckFraud(self, request, context):
         print(
             f"[FraudDetection] Request params: billing_city={request.billing_city} billing_country={request.billing_country},amount={request.amount},payment_method={request.payment_method},ip_address={request.ip_address}, "

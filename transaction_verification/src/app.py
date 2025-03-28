@@ -5,21 +5,24 @@ from datetime import datetime as dt
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 models_path = os.path.abspath(os.path.join(FILE, "../../../utils/models"))
+vector_clock_path = os.path.abspath(os.path.join(FILE, "../../../utils/vector_clock"))
 grpc_path = os.path.abspath(
     os.path.join(FILE, "../../../utils/pb/transaction_verification")
 )
 sys.path.insert(0, grpc_path)
 sys.path.insert(0, models_path)
+sys.path.insert(0, vector_clock_path)
 
 
 import grpc
 from concurrent import futures
-import time
 import re  # for regex checks, if you like
 
 # Import the generated classes
 import transaction_verification_pb2
 import transaction_verification_pb2_grpc
+
+from vector_clock import OrderEventTracker
 
 
 def check_luhn_algorithm(card_no):
@@ -44,6 +47,40 @@ def check_luhn_algorithm(card_no):
 class TransactionVerificationServiceServicer(
     transaction_verification_pb2_grpc.TransactionVerificationServiceServicer
 ):
+    def __init__(self):
+        self.service_name = "transaction_verification"
+        self.order_event_tracker = OrderEventTracker()
+
+    def VerifyBooks(self, request, context):
+        """
+        Verify that the order items list is not empty
+        """
+        order_id = request.orderId
+        books = request.books
+        received_clock = dict(request.vectorClock)
+
+        # Process the event and update vector clock
+        updated_clock = self.order_event_tracker.record_event(
+            order_id=order_id,
+            service=self.service_name,
+            event_name="verify_items",
+            received_clock=received_clock,
+        )
+
+        # Log the current vector clock
+        print(
+            f"Service {self.service_name}, Order {order_id}, Event 'verify_items', Clock: {updated_clock}"
+        )
+
+        # Check if items list is empty
+        is_valid = len(books) > 0
+        reason = "" if is_valid else "Order must contain at least one item"
+
+        # Create and return response with updated vector clock
+        return transaction_verification_pb2.BooksResponse(
+            isValid=is_valid, vectorClock=updated_clock
+        )
+
     def VerifyTransaction(self, request, context):
         """
         Very simple checks:
@@ -52,6 +89,8 @@ class TransactionVerificationServiceServicer(
         """
         credit_card_number = request.creditCardNumber
         expiry_date = request.expiryDate  # "MM/YY" or "MM/YYYY"
+        order_id = request.orderId  # "MM/YY" or "MM/YYYY"
+        received_clock = dict(request.vectorClock)
 
         is_valid = True
         reason = "OK"
@@ -112,9 +151,16 @@ class TransactionVerificationServiceServicer(
 
                 pass
 
+        # Process the event and update vector clock
+        updated_clock = self.order_event_tracker.record_event(
+            order_id=order_id,
+            service=self.service_name,
+            event_name="verify_credit_card",
+            received_clock=received_clock,
+        )
         print(f"Transaction Verification result: {is_valid}, reason: {reason}")
         return transaction_verification_pb2.TransactionResponse(
-            isValid=is_valid, reason=reason
+            isValid=is_valid, reason=reason, vectorClock=updated_clock
         )
 
 

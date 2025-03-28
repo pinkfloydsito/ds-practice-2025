@@ -24,6 +24,11 @@ for microservice in microservices:
 import fraud_detection_pb2 as fraud_detection
 import fraud_detection_pb2_grpc as fraud_detection_grpc
 
+vector_clock_path = os.path.abspath(os.path.join(FILE, f"../../../utils/vector_clock"))
+sys.path.insert(0, vector_clock_path)
+
+from vector_clock import OrderEventTracker
+
 
 def greet(grpc_factory, name="you"):
     try:
@@ -46,6 +51,7 @@ def greet(grpc_factory, name="you"):
 def create_app():
     app = Flask(__name__)
     app.grpc_factory = GrpcClientFactory()
+    app.event_tracker = OrderEventTracker()
 
     # ✅ List of blueprints
     blueprints = [
