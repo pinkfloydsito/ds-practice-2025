@@ -1,4 +1,5 @@
 import os
+import traceback
 import sys
 from flask import Blueprint, request, jsonify, current_app
 from marshmallow import ValidationError
@@ -252,19 +253,22 @@ def checkout():
 
         if (
             fraud_detection_result
-            and not fraud_detection_result.get("action", "REJECT") == "REJECT"
+            and not fraud_detection_result.get("action", "REJECT") == "APPROVE"
         ):
             details = fraud_detection_result.get("details", {})
             for key, value in details.items():
                 if key in ["ip_country", "ip_country_mismatch"]:
                     errors.append(f"Fraud detection: {key} - {value}")
+            print(f"Fraud detection result: {fraud_detection_result}")
             return jsonify(
                 {
                     "error": {
                         "code": "ORDER_REJECTED",
-                        "message": fraud_detection_result.get(
-                            "reasons", "Fraudulent transaction"
-                        ).join(", "),
+                        "message": ", ".join(
+                            fraud_detection_result.get(
+                                "reasons", ["Fraudulent transaction"]
+                            )
+                        ),
                     }
                 }
             ), 400
@@ -306,6 +310,8 @@ def checkout():
 
     except Exception as e:
         print(e)
+        # trace
+        traceback.print_exc()
         return jsonify(
             {
                 "error": {
@@ -401,6 +407,7 @@ def list_books():
         return jsonify(response)
     except Exception as e:
         print(e)
+        traceback.print_exc()
         return jsonify(
             {
                 "error": {
