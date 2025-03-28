@@ -2,21 +2,32 @@ syntax = "proto3";
 
 package transaction_verification;
 
-// The service definition
 service TransactionVerificationService {
-  // A simple RPC to verify transaction details
   rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+  rpc VerifyBooks (BooksRequest) returns (BooksResponse);
 }
 
-// Request message
 message TransactionRequest {
   string creditCardNumber = 1;
-  string expiryDate = 2; // format: "MM/YY" or "MM/YYYY"
-  
+  string expiryDate = 2;
+  map<string, int32> vectorClock = 3; 
+  string orderId = 4;
 }
 
-// Response message
+message BooksRequest {
+  repeated string books = 1; // List of book names
+  map<string, int32> vectorClock = 2; 
+  string orderId = 3;
+}
+
+// Responses
+message BooksResponse {
+  bool isValid = 1;
+  map<string, int32> vectorClock = 2; 
+}
+
 message TransactionResponse {
   bool isValid = 1;
   string reason = 2; 
+  map<string, int32> vectorClock = 3; 
 }

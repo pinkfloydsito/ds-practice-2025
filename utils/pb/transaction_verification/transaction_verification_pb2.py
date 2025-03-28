@@ -24,17 +24,37 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"B\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\"6\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2\x92\x01\n\x1eTransactionVerificationService\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"\xdb\x01\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\x12R\n\x0bvectorClock\x18\x03 \x03(\x0b\x32=.transaction_verification.TransactionRequest.VectorClockEntry\x12\x0f\n\x07orderId\x18\x04 \x01(\t\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xb0\x01\n\x0c\x42ooksRequest\x12\r\n\x05\x62ooks\x18\x01 \x03(\t\x12L\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x37.transaction_verification.BooksRequest.VectorClockEntry\x12\x0f\n\x07orderId\x18\x03 \x01(\t\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xa3\x01\n\rBooksResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12M\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x38.transaction_verification.BooksResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xbf\x01\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t\x12S\n\x0bvectorClock\x18\x03 \x03(\x0b\x32>.transaction_verification.TransactionResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\x32\xf2\x01\n\x1eTransactionVerificationService\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponse\x12^\n\x0bVerifyBooks\x12&.transaction_verification.BooksRequest\x1a\'.transaction_verification.BooksResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'transaction_verification_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_TRANSACTIONREQUEST']._serialized_start=60
-  _globals['_TRANSACTIONREQUEST']._serialized_end=126
-  _globals['_TRANSACTIONRESPONSE']._serialized_start=128
-  _globals['_TRANSACTIONRESPONSE']._serialized_end=182
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=185
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=331
+  _globals['_TRANSACTIONREQUEST_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_TRANSACTIONREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_BOOKSREQUEST_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_BOOKSREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_BOOKSRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_BOOKSRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_TRANSACTIONREQUEST']._serialized_start=61
+  _globals['_TRANSACTIONREQUEST']._serialized_end=280
+  _globals['_TRANSACTIONREQUEST_VECTORCLOCKENTRY']._serialized_start=230
+  _globals['_TRANSACTIONREQUEST_VECTORCLOCKENTRY']._serialized_end=280
+  _globals['_BOOKSREQUEST']._serialized_start=283
+  _globals['_BOOKSREQUEST']._serialized_end=459
+  _globals['_BOOKSREQUEST_VECTORCLOCKENTRY']._serialized_start=230
+  _globals['_BOOKSREQUEST_VECTORCLOCKENTRY']._serialized_end=280
+  _globals['_BOOKSRESPONSE']._serialized_start=462
+  _globals['_BOOKSRESPONSE']._serialized_end=625
+  _globals['_BOOKSRESPONSE_VECTORCLOCKENTRY']._serialized_start=230
+  _globals['_BOOKSRESPONSE_VECTORCLOCKENTRY']._serialized_end=280
+  _globals['_TRANSACTIONRESPONSE']._serialized_start=628
+  _globals['_TRANSACTIONRESPONSE']._serialized_end=819
+  _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_start=230
+  _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_end=280
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=822
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=1064
 # @@protoc_insertion_point(module_scope)
