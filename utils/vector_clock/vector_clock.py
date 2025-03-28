@@ -90,6 +90,19 @@ class OrderEventTracker:
                 }
                 self.events_processed[order_id] = set()
 
+    def order_exists(self, order_id: str) -> bool:
+        """
+        Check if an order has been initialized in the tracker
+
+        Args:
+            order_id: The unique identifier for the order
+
+        Returns:
+            bool: True if the order exists, False otherwise
+        """
+        with self.lock:
+            return order_id in self.orders
+
     def record_event(
         self,
         order_id: str,

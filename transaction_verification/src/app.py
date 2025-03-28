@@ -59,6 +59,12 @@ class TransactionVerificationServiceServicer(
         books = request.books
         received_clock = dict(request.vectorClock)
 
+        if not self.order_event_tracker.order_exists(
+            order_id
+        ):  # Add this method to your tracker
+            self.order_event_tracker.initialize_order(order_id)
+            print(f"Initialized vector clock for order {order_id}")
+
         # Process the event and update vector clock
         updated_clock = self.order_event_tracker.record_event(
             order_id=order_id,
@@ -66,6 +72,7 @@ class TransactionVerificationServiceServicer(
             event_name="verify_items",
             received_clock=received_clock,
         )
+        print("updated clock")
 
         # Log the current vector clock
         print(
@@ -91,6 +98,12 @@ class TransactionVerificationServiceServicer(
         expiry_date = request.expiryDate  # "MM/YY" or "MM/YYYY"
         order_id = request.orderId  # "MM/YY" or "MM/YYYY"
         received_clock = dict(request.vectorClock)
+
+        if not self.order_event_tracker.order_exists(
+            order_id
+        ):  # Add this method to your tracker
+            self.order_event_tracker.initialize_order(order_id)
+            print(f"Initialized vector clock for order {order_id}")
 
         is_valid = True
         reason = "OK"

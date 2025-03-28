@@ -265,7 +265,7 @@ def checkout():
                     order_id=order_id,
                     service="orchestrator",
                     event_name="items_verified",
-                    received_clock=dict(verification_items_result.vectorClock),
+                    received_clock=dict(verification_items_result["vectorClock"]),
                 )
 
                 print(
@@ -298,6 +298,13 @@ def checkout():
                     order_id=order_id,
                 )
                 print(f"Verification completed with result: {verification_result}")
+
+                event_tracker.record_event(
+                    order_id=order_id,
+                    service="orchestrator",
+                    event_name="transaction_verified",
+                    received_clock=dict(verification_result["vectorClock"]),
+                )
             except Exception as e:
                 error = f"Verification error: {str(e)}"
                 errors.append(error)
