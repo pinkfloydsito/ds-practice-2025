@@ -176,6 +176,21 @@ class TransactionVerificationServiceServicer(
             isValid=is_valid, reason=reason, vectorClock=updated_clock
         )
 
+    def ClearOrder(self, request, context):
+        """
+        Clear the cached order data if vector clock conditions are met
+        """
+        order_id = request.orderId
+        final_clock = dict(request.vectorClock)
+
+        # Attempt to clear the order data
+        success = self.event_tracker.clear_order(order_id, final_clock)
+
+        if not success:
+            print(f"Vector clock condition not met for clearing order {order_id}")
+
+        return transaction_verification_pb2.ClearOrderResponse(success=success)
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

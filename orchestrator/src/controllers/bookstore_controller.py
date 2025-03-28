@@ -235,7 +235,6 @@ def checkout():
         print(f"vector clock: {initial_clock}")
 
         errors = []
-        final_vector_clock = None
 
         # Event execution flag to control flow instead of using locks and mutex
         event_completed = {
@@ -276,6 +275,7 @@ def checkout():
                 error = f"Verification error: {str(e)}"
                 errors.append(error)
                 print(error)
+                traceback.print_exc()
             finally:
                 event_completed["verify_items"].set()
 
@@ -308,7 +308,9 @@ def checkout():
             except Exception as e:
                 error = f"Verification error: {str(e)}"
                 errors.append(error)
+
                 print(error)
+                traceback.print_exc()
             finally:
                 event_completed["verify_transaction"].set()
 
@@ -325,6 +327,7 @@ def checkout():
                 errors.append(error)
 
                 print(error)
+                traceback.print_exc()
 
         def fraud_detection_worker():
             nonlocal fraud_detection_result, errors
@@ -362,8 +365,11 @@ def checkout():
                     fraud_detection_job,
                 ]
             ):
-                if final_vector_clock:
-                    broadcast_clear_order(grpc_factory, order_id, final_vector_clock)
+                broadcast_clear_order(
+                    grpc_factory,
+                    order_id,
+                    event_tracker.get_clock(order_id, "orchestrator"),
+                )
 
         if (
             fraud_detection_result

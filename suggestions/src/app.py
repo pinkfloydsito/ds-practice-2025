@@ -4,8 +4,11 @@ import os
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 models_path = os.path.abspath(os.path.join(FILE, "../../../utils/models"))
 grpc_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/suggestions"))
+vector_clock_path = os.path.abspath(os.path.join(FILE, "../../../utils/vector_clock"))
 sys.path.insert(0, grpc_path)
 sys.path.insert(0, models_path)
+sys.path.insert(0, vector_clock_path)
+
 import suggestions_pb2 as book_suggestion
 
 import suggestions_pb2_grpc as book_suggestion_grpc
@@ -20,6 +23,8 @@ from book import Book, engine
 from typing import List
 
 from sentence_transformers import SentenceTransformer
+
+from vector_clock import OrderEventTracker
 
 load_dotenv()
 
@@ -71,6 +76,7 @@ def find_similar_books(tokens: List[str], top_n=5):
 class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
     def __init__(self):
         self.service_name = "book_suggestion"
+        self.order_event_tracker = OrderEventTracker()
 
     def GetSuggestions(self, request, context):
         print(f"[Suggestions] Received request: {request}")
@@ -96,6 +102,21 @@ class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
 
         print(f"[Suggestions] result: {books}")
         return response
+
+    def ClearOrder(self, request, context):
+        """
+        Clear the cached order data if vector clock conditions are met
+        """
+        order_id = request.orderId
+        final_clock = dict(request.vectorClock)
+
+        # Attempt to clear the order data
+        success = self.event_tracker.clear_order(order_id, final_clock)
+
+        if not success:
+            print(f"Vector clock condition not met for clearing order {order_id}")
+
+        return book_suggestion.ClearOrderResponse(success=success)
 
 
 def serve():
