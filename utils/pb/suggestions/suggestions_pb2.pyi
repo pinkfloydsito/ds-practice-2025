@@ -1,11 +1,26 @@
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
-from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class SuggestionInitRequest(_message.Message):
+    __slots__ = ("order_id", "book_tokens", "user_id")
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    BOOK_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    book_tokens: _containers.RepeatedScalarFieldContainer[str]
+    user_id: str
+    def __init__(self, order_id: _Optional[str] = ..., book_tokens: _Optional[_Iterable[str]] = ..., user_id: _Optional[str] = ...) -> None: ...
+
+class SuggestionInitResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
 
 class RecommendationRequest(_message.Message):
     __slots__ = ("user_id", "limit", "book_tokens", "order_id")

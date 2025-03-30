@@ -3,12 +3,28 @@ syntax = "proto3";
 package booksuggest;
 
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/empty.proto";
 
 service BookSuggestion {
+    // New method for initialization
+    rpc InitializeOrder (SuggestionInitRequest) returns (SuggestionInitResponse);
+
+    // Existing method for final suggestions
     rpc GetSuggestions (RecommendationRequest) returns (RecommendationResponse);
 }
 
+// New message for initialization
+message SuggestionInitRequest {
+  string order_id = 1;
+  repeated string book_tokens = 2;
+  // Possibly other fields like user_id, etc. if you want to store them
+  string user_id = 3;
+}
+
+message SuggestionInitResponse {
+  bool success = 1;
+}
+
+// Existing messages
 message RecommendationRequest {
   string user_id = 1;
   int32 limit = 2;

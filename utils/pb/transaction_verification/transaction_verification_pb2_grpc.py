@@ -35,6 +35,11 @@ class TransactionVerificationServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.InitializeOrder = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/InitializeOrder',
+                request_serializer=transaction__verification__pb2.TransactionInitRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.TransactionInitResponse.FromString,
+                _registered_method=True)
         self.VerifyTransaction = channel.unary_unary(
                 '/transaction_verification.TransactionVerificationService/VerifyTransaction',
                 request_serializer=transaction__verification__pb2.TransactionRequest.SerializeToString,
@@ -46,9 +51,14 @@ class TransactionVerificationServiceServicer(object):
     """The service definition
     """
 
+    def InitializeOrder(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def VerifyTransaction(self, request, context):
-        """A simple RPC to verify transaction details
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -56,6 +66,11 @@ class TransactionVerificationServiceServicer(object):
 
 def add_TransactionVerificationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'InitializeOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeOrder,
+                    request_deserializer=transaction__verification__pb2.TransactionInitRequest.FromString,
+                    response_serializer=transaction__verification__pb2.TransactionInitResponse.SerializeToString,
+            ),
             'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
                     servicer.VerifyTransaction,
                     request_deserializer=transaction__verification__pb2.TransactionRequest.FromString,
@@ -72,6 +87,33 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
 class TransactionVerificationService(object):
     """The service definition
     """
+
+    @staticmethod
+    def InitializeOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/InitializeOrder',
+            transaction__verification__pb2.TransactionInitRequest.SerializeToString,
+            transaction__verification__pb2.TransactionInitResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def VerifyTransaction(request,
