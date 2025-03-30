@@ -8,14 +8,16 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RecommendationRequest(_message.Message):
-    __slots__ = ("user_id", "limit", "book_tokens")
+    __slots__ = ("user_id", "limit", "book_tokens", "order_id")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     BOOK_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     limit: int
     book_tokens: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, user_id: _Optional[str] = ..., limit: _Optional[int] = ..., book_tokens: _Optional[_Iterable[str]] = ...) -> None: ...
+    order_id: str
+    def __init__(self, user_id: _Optional[str] = ..., limit: _Optional[int] = ..., book_tokens: _Optional[_Iterable[str]] = ..., order_id: _Optional[str] = ...) -> None: ...
 
 class RecommendationResponse(_message.Message):
     __slots__ = ("recommendations",)

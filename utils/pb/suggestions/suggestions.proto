@@ -13,6 +13,7 @@ message RecommendationRequest {
   string user_id = 1;
   int32 limit = 2;
   repeated string book_tokens = 3;
+  string order_id = 4; 
 }
 
 message RecommendationResponse {

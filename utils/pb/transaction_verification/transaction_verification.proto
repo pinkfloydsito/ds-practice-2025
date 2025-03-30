@@ -12,6 +12,8 @@ service TransactionVerificationService {
 message TransactionRequest {
   string creditCardNumber = 1;
   string expiryDate = 2; // format: "MM/YY" or "MM/YYYY"
+  string order_id = 3;
+
   
 }
 
