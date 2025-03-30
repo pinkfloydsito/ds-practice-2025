@@ -34,6 +34,11 @@ class FraudDetectionServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.InitializeOrder = channel.unary_unary(
+                '/fraud_Detection.FraudDetectionService/InitializeOrder',
+                request_serializer=fraud__detection__pb2.FraudInitRequest.SerializeToString,
+                response_deserializer=fraud__detection__pb2.FraudInitResponse.FromString,
+                _registered_method=True)
         self.CheckFraud = channel.unary_unary(
                 '/fraud_Detection.FraudDetectionService/CheckFraud',
                 request_serializer=fraud__detection__pb2.FraudRequest.SerializeToString,
@@ -44,8 +49,16 @@ class FraudDetectionServiceStub(object):
 class FraudDetectionServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
+    def InitializeOrder(self, request, context):
+        """New method to store or initialize the order data
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def CheckFraud(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Existing method that does the real fraud check
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -53,6 +66,11 @@ class FraudDetectionServiceServicer(object):
 
 def add_FraudDetectionServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'InitializeOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.InitializeOrder,
+                    request_deserializer=fraud__detection__pb2.FraudInitRequest.FromString,
+                    response_serializer=fraud__detection__pb2.FraudInitResponse.SerializeToString,
+            ),
             'CheckFraud': grpc.unary_unary_rpc_method_handler(
                     servicer.CheckFraud,
                     request_deserializer=fraud__detection__pb2.FraudRequest.FromString,
@@ -68,6 +86,33 @@ def add_FraudDetectionServiceServicer_to_server(servicer, server):
  # This class is part of an EXPERIMENTAL API.
 class FraudDetectionService(object):
     """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def InitializeOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/fraud_Detection.FraudDetectionService/InitializeOrder',
+            fraud__detection__pb2.FraudInitRequest.SerializeToString,
+            fraud__detection__pb2.FraudInitResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def CheckFraud(request,

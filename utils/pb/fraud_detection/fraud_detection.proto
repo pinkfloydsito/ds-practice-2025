@@ -2,12 +2,34 @@ syntax = "proto3";
 
 import "google/protobuf/struct.proto";
 
-package fraud_Detection;  
+package fraud_Detection;
 
 service FraudDetectionService {
+    // New method to store or initialize the order data
+    rpc InitializeOrder (FraudInitRequest) returns (FraudInitResponse);
+
+    // Existing method that does the real fraud check
     rpc CheckFraud (FraudRequest) returns (FraudResponse);
 }
 
+// New message for the initialization phase
+message FraudInitRequest {
+    double amount = 1;
+    string ip_address = 2;
+    string email = 3;
+    string billing_country = 4;
+    string billing_city = 5;
+    string payment_method = 6;
+    string order_id = 7;
+    // Optionally a vector clock or more data
+}
+
+message FraudInitResponse {
+    bool success = 1;
+    // Possibly a map<string,int32> vector_clock = 2;
+}
+
+// Existing
 message FraudRequest {
     double amount = 1;
     string ip_address = 2;
@@ -21,6 +43,6 @@ message FraudRequest {
 message FraudResponse {
     double fraud_probability = 1;
     string action = 2;
-  google.protobuf.Struct details = 3;  // This allows for arbitrary JSON structure
-  repeated string reasons = 4;
+    google.protobuf.Struct details = 3;
+    repeated string reasons = 4;
 }
