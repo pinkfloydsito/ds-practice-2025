@@ -7,20 +7,22 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class FraudRequest(_message.Message):
-    __slots__ = ("amount", "ip_address", "email", "billing_country", "billing_city", "payment_method")
+    __slots__ = ("amount", "ip_address", "email", "billing_country", "billing_city", "payment_method", "order_id")
     AMOUNT_FIELD_NUMBER: _ClassVar[int]
     IP_ADDRESS_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     BILLING_COUNTRY_FIELD_NUMBER: _ClassVar[int]
     BILLING_CITY_FIELD_NUMBER: _ClassVar[int]
     PAYMENT_METHOD_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     amount: float
     ip_address: str
     email: str
     billing_country: str
     billing_city: str
     payment_method: str
-    def __init__(self, amount: _Optional[float] = ..., ip_address: _Optional[str] = ..., email: _Optional[str] = ..., billing_country: _Optional[str] = ..., billing_city: _Optional[str] = ..., payment_method: _Optional[str] = ...) -> None: ...
+    order_id: str
+    def __init__(self, amount: _Optional[float] = ..., ip_address: _Optional[str] = ..., email: _Optional[str] = ..., billing_country: _Optional[str] = ..., billing_city: _Optional[str] = ..., payment_method: _Optional[str] = ..., order_id: _Optional[str] = ...) -> None: ...
 
 class FraudResponse(_message.Message):
     __slots__ = ("fraud_probability", "action", "details", "reasons")

@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"B\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\"6\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2\x92\x01\n\x1eTransactionVerificationService\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"T\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\x12\x10\n\x08order_id\x18\x03 \x01(\t\"6\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t2\x92\x01\n\x1eTransactionVerificationService\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,9 +32,9 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'transaction_verification_pb
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_TRANSACTIONREQUEST']._serialized_start=60
-  _globals['_TRANSACTIONREQUEST']._serialized_end=126
-  _globals['_TRANSACTIONRESPONSE']._serialized_start=128
-  _globals['_TRANSACTIONRESPONSE']._serialized_end=182
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=185
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=331
+  _globals['_TRANSACTIONREQUEST']._serialized_end=144
+  _globals['_TRANSACTIONRESPONSE']._serialized_start=146
+  _globals['_TRANSACTIONRESPONSE']._serialized_end=200
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=203
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=349
 # @@protoc_insertion_point(module_scope)

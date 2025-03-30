@@ -13,7 +13,6 @@ from sqlalchemy.orm import sessionmaker
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-
 microservices = ["suggestions", "transaction_verification", "fraud_detection"]
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -36,8 +35,10 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 import fraud_detection_pb2 as fraud_pb2
 import fraud_detection_pb2_grpc as fraud_pb2_grpc
 
+bookstore_bp = Blueprint("bookstore", __name__)
 
-def get_suggestions(grpc_factory, book_tokens: List[str]):
+
+def get_suggestions(grpc_factory, book_tokens: List[str], order_id: str):
     try:
         stub = grpc_factory.get_stub(
             "suggestions", suggestions_grpc.BookSuggestionStub, secure=False
@@ -47,10 +48,10 @@ def get_suggestions(grpc_factory, book_tokens: List[str]):
             user_id="1",
             limit=3,
             book_tokens=book_tokens,
+            order_id=order_id,
         )
 
         response = stub.GetSuggestions(request, timeout=grpc_factory.default_timeout)
-
         response_dict = MessageToDict(response)
 
         raw_recommendations = response_dict.get("recommendations", [])
@@ -67,13 +68,14 @@ def get_suggestions(grpc_factory, book_tokens: List[str]):
             )
 
         return formatted_recommendations
+
     except grpc.RpcError as e:
         print(e)
         print(f"gRPC error: {e.code()}: {e.details()}")
         raise
 
 
-def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
+def verify_transaction(grpc_factory, credit_card: str, expiry_date: str, order_id: str):
     try:
         stub = grpc_factory.get_stub(
             "transaction_verification",
@@ -82,14 +84,13 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
         )
 
         request = transaction_verification.TransactionRequest(
+            order_id=order_id,
             creditCardNumber=credit_card,
             expiryDate=expiry_date,
         )
 
         response = stub.VerifyTransaction(request, timeout=grpc_factory.default_timeout)
-
         response_dict = MessageToDict(response)
-
         return response_dict
 
     except grpc.RpcError as e:
@@ -100,6 +101,7 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str):
 
 def check_fraud(
     grpc_factory,
+    order_id: str,
     amount: float,
     ip_address: str,
     email: str,
@@ -109,17 +111,15 @@ def check_fraud(
 ):
     """
     Calls the FraudDetectionService.CheckFraud RPC,
-    passing a user name and user email.
+    passing fields from the request as needed for FraudRequest.
     """
     try:
-        # Acquire a stub for the 'fraud_detection' microservice.
         stub = grpc_factory.get_stub(
             "fraud_detection",
             fraud_pb2_grpc.FraudDetectionServiceStub,
             secure=False,
         )
 
-        # Build the request object (fields depend on your .proto definition)
         request = fraud_pb2.FraudRequest(
             amount=amount,
             ip_address=ip_address,
@@ -127,18 +127,16 @@ def check_fraud(
             billing_country=billing_country,
             billing_city=billing_city,
             payment_method=payment_method,
+            order_id=order_id,
         )
 
-        # Make the gRPC call with a timeout
         response = stub.CheckFraud(request, timeout=grpc_factory.default_timeout)
-
-        # Convert to a dictionary for convenience
         response_dict = MessageToDict(
             response,
             preserving_proto_field_name=True,
             always_print_fields_with_no_presence=True,
         )
-        return response_dict  # e.g. { "is_fraudulent": True/False, "reason": "..." }
+        return response_dict
 
     except grpc.RpcError as e:
         print(e)
@@ -146,14 +144,12 @@ def check_fraud(
         raise
 
 
-bookstore_bp = Blueprint("bookstore", __name__)
-
-
 @bookstore_bp.route("/checkout", methods=["POST"])
 def checkout():
+    order_id = str(uuid.uuid4())
     grpc_factory = current_app.grpc_factory
     try:
-        # Validate request data
+        # Validate request data via Marshmallow schema
         schema = CheckoutRequestSchema()
         data = schema.load(request.json)
 
@@ -168,17 +164,14 @@ def checkout():
             ), 400
 
         books = data.get("items", [])
-
         books_tokens = [book["name"] for book in books]
 
         credit_card_number = data.get("creditCard", {}).get("number")
         expiration_date = data.get("creditCard", {}).get("expirationDate")
 
         payment_method = "Credit Card"
-
         amount = sum(book.get("price", 10) for book in books)
         ip_address = request.remote_addr or ""
-        # ip_address = "5.45.198.12"
         email = data.get("user", {}).get("contact", "")
         billing_country = data["billingAddress"]["country"]
         billing_city = data["billingAddress"]["city"]
@@ -186,36 +179,33 @@ def checkout():
         verification_result = None
         suggestions_result = None
         fraud_detection_result = None
-
         errors = []
 
+        # Worker functions for parallel tasks
         def verify_transaction_worker():
             nonlocal verification_result, errors
             try:
                 print(f"Starting verification for transaction: {credit_card_number}")
                 verification_result = verify_transaction(
-                    grpc_factory, credit_card_number, expiration_date
+                    grpc_factory, credit_card_number, expiration_date, order_id
                 )
                 print(f"Verification completed with result: {verification_result}")
             except Exception as e:
                 error = f"Verification error: {str(e)}"
-
                 errors.append(error)
-
                 print(error)
 
         def suggestions_worker():
             nonlocal suggestions_result, errors
             try:
                 print("Starting suggestions retrieval")
-                suggestions_result = get_suggestions(grpc_factory, books_tokens)
+                suggestions_result = get_suggestions(grpc_factory, books_tokens, order_id)
                 print(
                     f"Retrieved {len(suggestions_result) if suggestions_result else 0} suggestions"
                 )
             except Exception as e:
                 error = f"Suggestions error: {str(e)}"
                 errors.append(error)
-
                 print(error)
 
         def fraud_detection_worker():
@@ -224,6 +214,7 @@ def checkout():
                 print("Starting fraud_detection analysis")
                 fraud_detection_result = check_fraud(
                     grpc_factory,
+                    order_id=order_id,
                     amount=amount,
                     ip_address=ip_address,
                     email=email,
@@ -231,15 +222,13 @@ def checkout():
                     billing_city=billing_city,
                     payment_method=payment_method,
                 )
-                print(
-                    f"Fraud detection completed with result: {fraud_detection_result}"
-                )
+                print(f"Fraud detection completed with result: {fraud_detection_result}")
             except Exception as e:
                 error = f"Fraud detection error: {str(e)}"
                 errors.append(error)
-
                 print(error)
 
+        # Run the workers in parallel
         with ThreadPoolExecutor(max_workers=2) as executor:
             verify_transaction_job = executor.submit(verify_transaction_worker)
             suggestions_job = executor.submit(suggestions_worker)
@@ -250,25 +239,29 @@ def checkout():
             ):
                 pass
 
-        if (
-            fraud_detection_result
-            and not fraud_detection_result.get("action", "REJECT") == "REJECT"
-        ):
+        # Fraud check: REJECT if action is "REJECT"
+        fraud_action = fraud_detection_result.get("action", "APPROVE")
+        if fraud_action == "REJECT":
             details = fraud_detection_result.get("details", {})
             for key, value in details.items():
                 if key in ["ip_country", "ip_country_mismatch"]:
                     errors.append(f"Fraud detection: {key} - {value}")
+
+            reasons_list = fraud_detection_result.get("reasons", [])
+            if not reasons_list:
+                reasons_list = ["Fraudulent transaction"]
+
+            joined_reasons = ", ".join(reasons_list)
             return jsonify(
                 {
                     "error": {
                         "code": "ORDER_REJECTED",
-                        "message": fraud_detection_result.get(
-                            "reasons", "Fraudulent transaction"
-                        ).join(", "),
+                        "message": joined_reasons,
                     }
                 }
             ), 400
 
+        # Transaction verification check
         if not (verification_result and verification_result.get("isValid", False)):
             return jsonify(
                 {
@@ -281,16 +274,16 @@ def checkout():
                 }
             ), 400
 
+        # If all checks pass => Approved
         response = {
-            "orderId": str(uuid.uuid4()),
+            "orderId": order_id,
             "status": "Order Approved",
             "suggestedBooks": suggestions_result,
         }
-
         return jsonify(OrderStatusResponseSchema().dump(response))
 
     except ValidationError as err:
-        # If your frontend expects an 'error' key with a 'message':
+        # Marshmallow validation error
         return jsonify(
             {
                 "error": {
@@ -335,10 +328,7 @@ def process_payment(user):
             "deviceLanguage": "en-US",
         }
 
-        response = requests.post(
-            "http://localhost:8081/transfer", json=transfer_payload
-        )
-
+        response = requests.post("http://localhost:8081/transfer", json=transfer_payload)
         if response.status_code == 200:
             transfer_data = response.json()
             return transfer_data["status"] == "Transfer Approved"
@@ -399,6 +389,7 @@ def list_books():
         }
 
         return jsonify(response)
+
     except Exception as e:
         print(e)
         return jsonify(
@@ -409,5 +400,6 @@ def list_books():
                 }
             }
         ), 500
+
     finally:
         session.close()

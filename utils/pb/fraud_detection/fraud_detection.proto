@@ -15,6 +15,7 @@ message FraudRequest {
     string billing_country = 4;
     string billing_city = 5;
     string payment_method = 6;
+    string order_id = 7;
 }
 
 message FraudResponse {
