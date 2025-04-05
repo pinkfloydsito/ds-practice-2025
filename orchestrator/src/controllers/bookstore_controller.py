@@ -47,7 +47,9 @@ bookstore_bp = Blueprint("bookstore", __name__)
 # -----------------------------------------------------------------------------
 #  NEW: Initialize calls for each microservice
 # -----------------------------------------------------------------------------
-def initialize_transaction_order(grpc_factory, order_id: str, credit_card_number: str, expiry_date: str):
+def initialize_transaction_order(grpc_factory, order_id: str, credit_card_number: str, expiry_date: str,
+    billing_city: str,
+    billing_country: str):
     """
     Calls TransactionVerificationService.InitializeOrder to store CC info before final verify.
     """
@@ -60,7 +62,12 @@ def initialize_transaction_order(grpc_factory, order_id: str, credit_card_number
         request = transaction_verification.TransactionInitRequest(
             order_id=order_id,
             creditCardNumber=credit_card_number,
-            expiryDate=expiry_date
+            expiryDate=expiry_date,
+            #billingStreet=billing_street,
+            billingCity=billing_city,
+            #billingState=billing_state,
+            #billingZip=billing_zip,
+            billingCountry=billing_country
         )
         response = stub.InitializeOrder(request)
         print(f"[Orchestrator] initialize_transaction_order => success={response.success}")
@@ -122,7 +129,9 @@ def initialize_suggestions_order(grpc_factory, order_id: str, book_tokens: List[
 # -----------------------------------------------------------------------------
 #  Existing final calls (VerifyTransaction, GetSuggestions, CheckFraud)
 # -----------------------------------------------------------------------------
-def verify_transaction(grpc_factory, credit_card: str, expiry_date: str, order_id: str):
+def verify_transaction(grpc_factory, credit_card: str, expiry_date: str, order_id: str,
+    billing_city: str,
+    billing_country: str):
     try:
         stub = grpc_factory.get_stub(
             "transaction_verification",
@@ -133,6 +142,11 @@ def verify_transaction(grpc_factory, credit_card: str, expiry_date: str, order_i
             order_id=order_id,
             creditCardNumber=credit_card,
             expiryDate=expiry_date,
+            #billingStreet=billing_street,
+            billingCity=billing_city,
+            #billingState=billing_state,
+            #billingZip=billing_zip,
+            billingCountry=billing_country
         )
         response = stub.VerifyTransaction(request)
         return MessageToDict(response)
@@ -242,7 +256,9 @@ def checkout():
             grpc_factory,
             order_id,
             credit_card_number,
-            expiration_date
+            expiration_date,
+            billing_city,
+            billing_country
         )
         fraud_init_ok = initialize_fraud_order(
             grpc_factory,
@@ -281,7 +297,7 @@ def checkout():
             try:
                 print(f"[Orchestrator] Starting final VerifyTransaction for card: {credit_card_number}")
                 verification_result = verify_transaction(
-                    grpc_factory, credit_card_number, expiration_date, order_id
+                    grpc_factory, credit_card_number, expiration_date, order_id,billing_city, billing_country
                 )
                 print(f"[Orchestrator] Verification final result: {verification_result}")
             except Exception as e:
@@ -388,3 +404,98 @@ def checkout():
                 "message": "An internal error occurred"
             }
         }), 500
+def process_payment(user):
+    """Handles the payment by calling the /transfer API."""
+    try:
+        transfer_payload = {
+            "sender": {"name": "Bookstore Inc.", "accountNumber": "111122223333"},
+            "recipient": {"name": user["name"], "accountNumber": "444455556666"},
+            "amount": 10000,
+            "currency": "USD",
+            "paymentMethod": "Credit Card",
+            "transferNote": "Book purchase",
+            "notificationPreferences": ["Email"],
+            "device": {"type": "Desktop", "model": "PC", "os": "Windows 11"},
+            "browser": {"name": "Chrome", "version": "118.0"},
+            "appVersion": "1.0.0",
+            "screenResolution": "1920x1080",
+            "referrer": "Bookstore Website",
+            "deviceLanguage": "en-US",
+        }
+
+        response = requests.post(
+            "http://localhost:8081/transfer", json=transfer_payload
+        )
+
+        if response.status_code == 200:
+            transfer_data = response.json()
+            return transfer_data["status"] == "Transfer Approved"
+        else:
+            print(f"Transfer API failed with status code: {response.status_code}")
+            return False
+
+    except Exception as e:
+        print(f"Error processing payment: {e}")
+        return False
+
+
+@bookstore_bp.route("/books", methods=["GET"])
+def list_books():
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    try:
+        page = request.args.get("page", 1, type=int)
+        limit = request.args.get("limit", 10, type=int)
+
+        genre = request.args.get("genre")
+        author = request.args.get("author")
+
+        query = session.query(Book).with_entities(
+            Book.id,
+            Book.title,
+            Book.author,
+            Book.genre,
+            Book.subgenre,
+            Book.height,
+            Book.publisher,
+        )
+
+        # Apply filters if provided
+        if genre:
+            query = query.filter(Book.genres.contains([genre]))
+        if author:
+            query = query.filter(Book.author.ilike(f"%{author}%"))
+
+        # Get total count for pagination
+        total = query.count()
+
+        # Apply pagination
+        books = query.offset((page - 1) * limit).limit(limit).all()
+
+        # Convert to dictionary for JSON response
+        books_data = [book._asdict() for book in books]
+
+        response = {
+            "books": books_data,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "pages": (total + limit - 1) // limit,
+            },
+        }
+
+        return jsonify(response)
+    except Exception as e:
+        print(e)
+        return jsonify(
+            {
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "An internal error occurred",
+                }
+            }
+        ), 500
+    finally:
+        session.close()

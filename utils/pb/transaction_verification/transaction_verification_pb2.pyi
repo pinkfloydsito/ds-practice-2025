@@ -5,14 +5,24 @@ from typing import ClassVar as _ClassVar, Optional as _Optional
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class TransactionInitRequest(_message.Message):
-    __slots__ = ("order_id", "creditCardNumber", "expiryDate")
+    __slots__ = ("order_id", "creditCardNumber", "expiryDate", "billingStreet", "billingCity", "billingState", "billingZip", "billingCountry")
     ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     CREDITCARDNUMBER_FIELD_NUMBER: _ClassVar[int]
     EXPIRYDATE_FIELD_NUMBER: _ClassVar[int]
+    BILLINGSTREET_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCITY_FIELD_NUMBER: _ClassVar[int]
+    BILLINGSTATE_FIELD_NUMBER: _ClassVar[int]
+    BILLINGZIP_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCOUNTRY_FIELD_NUMBER: _ClassVar[int]
     order_id: str
     creditCardNumber: str
     expiryDate: str
-    def __init__(self, order_id: _Optional[str] = ..., creditCardNumber: _Optional[str] = ..., expiryDate: _Optional[str] = ...) -> None: ...
+    billingStreet: str
+    billingCity: str
+    billingState: str
+    billingZip: str
+    billingCountry: str
+    def __init__(self, order_id: _Optional[str] = ..., creditCardNumber: _Optional[str] = ..., expiryDate: _Optional[str] = ..., billingStreet: _Optional[str] = ..., billingCity: _Optional[str] = ..., billingState: _Optional[str] = ..., billingZip: _Optional[str] = ..., billingCountry: _Optional[str] = ...) -> None: ...
 
 class TransactionInitResponse(_message.Message):
     __slots__ = ("success",)
@@ -21,14 +31,22 @@ class TransactionInitResponse(_message.Message):
     def __init__(self, success: bool = ...) -> None: ...
 
 class TransactionRequest(_message.Message):
-    __slots__ = ("creditCardNumber", "expiryDate", "order_id")
+    __slots__ = ("creditCardNumber", "expiryDate", "order_id", "billingCity", "billingState", "billingZip", "billingCountry")
     CREDITCARDNUMBER_FIELD_NUMBER: _ClassVar[int]
     EXPIRYDATE_FIELD_NUMBER: _ClassVar[int]
     ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCITY_FIELD_NUMBER: _ClassVar[int]
+    BILLINGSTATE_FIELD_NUMBER: _ClassVar[int]
+    BILLINGZIP_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCOUNTRY_FIELD_NUMBER: _ClassVar[int]
     creditCardNumber: str
     expiryDate: str
     order_id: str
-    def __init__(self, creditCardNumber: _Optional[str] = ..., expiryDate: _Optional[str] = ..., order_id: _Optional[str] = ...) -> None: ...
+    billingCity: str
+    billingState: str
+    billingZip: str
+    billingCountry: str
+    def __init__(self, creditCardNumber: _Optional[str] = ..., expiryDate: _Optional[str] = ..., order_id: _Optional[str] = ..., billingCity: _Optional[str] = ..., billingState: _Optional[str] = ..., billingZip: _Optional[str] = ..., billingCountry: _Optional[str] = ...) -> None: ...
 
 class TransactionResponse(_message.Message):
     __slots__ = ("isValid", "reason")
