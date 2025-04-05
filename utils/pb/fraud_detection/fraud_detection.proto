@@ -29,6 +29,7 @@ message FraudInitResponse {
     // Possibly a map<string,int32> vector_clock = 2;
 }
 
+
 // Existing
 message FraudRequest {
     double amount = 1;

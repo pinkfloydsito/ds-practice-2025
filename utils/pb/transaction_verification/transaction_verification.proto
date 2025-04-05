@@ -4,9 +4,7 @@ package transaction_verification;
 
 // The service definition
 service TransactionVerificationService {
-  
   rpc InitializeOrder (TransactionInitRequest) returns (TransactionInitResponse);
-
   rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
 }
 
@@ -14,19 +12,27 @@ message TransactionInitRequest {
   string order_id = 1;
   string creditCardNumber = 2;
   string expiryDate = 3; // same format "MM/YY" or "MM/YYYY"
+  string billingStreet = 4;
+  string billingCity = 5;
+  string billingState = 6;
+  string billingZip = 7;
+  string billingCountry = 8;
 }
 
 message TransactionInitResponse {
   bool success = 1;
   // Possibly a map<string,int32> vector_clock = 2; if you do vector clocks
 }
+
 // Request message
 message TransactionRequest {
   string creditCardNumber = 1;
   string expiryDate = 2; // format: "MM/YY" or "MM/YYYY"
   string order_id = 3;
-
-  
+  string billingCity = 4;
+  string billingState = 5;
+  string billingZip = 6;
+  string billingCountry = 7;
 }
 
 // Response message
