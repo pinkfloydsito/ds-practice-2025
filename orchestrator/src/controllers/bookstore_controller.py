@@ -44,6 +44,7 @@ def checkout():
     """Handle book checkout process."""
     order_id = str(uuid.uuid4())
     grpc_factory = current_app.grpc_factory
+    order_event_tracker = current_app.order_event_tracker
 
     try:
         # 1) Validate the request
@@ -85,7 +86,7 @@ def checkout():
         order = OrderInfo(order_id=order_id, book_tokens=book_tokens, amount=amount)
 
         # 3) Create orchestrator and process order
-        orchestrator = OrderOrchestratorService(grpc_factory)
+        orchestrator = OrderOrchestratorService(grpc_factory, order_event_tracker)
 
         # Initialize services [grpc calls]
         if not orchestrator.initialize_services(order, user, credit_card, billing):
@@ -192,4 +193,3 @@ def list_books():
         ), 500
     finally:
         session.close()
-

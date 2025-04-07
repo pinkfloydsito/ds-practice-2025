@@ -24,8 +24,9 @@ from bookstore_models import ServiceResult, OrderInfo, UserInfo, BillingInfo
 class FraudService:
     """Client for the fraud detection service."""
 
-    def __init__(self, grpc_factory):
+    def __init__(self, grpc_factory, order_event_tracker):
         self.grpc_factory = grpc_factory
+        self.event_tracker = order_event_tracker
 
     def initialize_order(
         self, order: OrderInfo, user: UserInfo, billing: BillingInfo
@@ -37,6 +38,9 @@ class FraudService:
                 fraud_pb2_grpc.FraudDetectionServiceStub,
                 secure=False,
             )
+
+            current_clock = self.event_tracker.get_clock(order.order_id, "orchestrator")
+
             request = fraud_pb2.FraudInitRequest(
                 order_id=order.order_id,
                 amount=order.amount,
@@ -45,8 +49,11 @@ class FraudService:
                 billing_country=billing.country,
                 billing_city=billing.city,
                 payment_method=order.payment_method,
+                vectorClock=current_clock,
             )
             response = stub.InitializeOrder(request)
+            self._record_vector_clock(order.order_id, response.vectorClock)
+
             print(
                 f"[Orchestrator] initialize_fraud_order => success={response.success}"
             )
@@ -66,6 +73,9 @@ class FraudService:
                 fraud_pb2_grpc.FraudDetectionServiceStub,
                 secure=False,
             )
+
+            current_clock = self.event_tracker.get_clock(order.order_id, "orchestrator")
+
             request = fraud_pb2.FraudRequest(
                 order_id=order.order_id,
                 amount=order.amount,
@@ -74,8 +84,12 @@ class FraudService:
                 billing_country=billing.country,
                 billing_city=billing.city,
                 payment_method=order.payment_method,
+                vectorClock=current_clock,
             )
             response = stub.CheckFraud(request)
+
+            self._record_vector_clock(order.order_id, response.vectorClock)
+
             result.data = MessageToDict(
                 response,
                 preserving_proto_field_name=True,
@@ -94,3 +108,11 @@ class FraudService:
             print(f"gRPC error (check_fraud): {e.code()}: {e.details()}")
             result.error = f"Fraud service error: {e.details()}"
             return result
+
+    def _record_vector_clock(self, order_id, clock):
+        self.event_tracker.record_event(
+            order_id=order_id,
+            service="orchestrator",
+            event_name="transaction_verified",
+            received_clock=dict(clock),
+        )

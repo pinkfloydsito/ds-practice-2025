@@ -1,3 +1,4 @@
+import logging
 import sys
 import os
 from typing import Any, Dict, Tuple
@@ -7,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from services.transaction_service import TransactionService
 from services.suggestions_service import SuggestionsService
 from services.fraud_service import FraudService
+
+logger = logging.getLogger(__name__)
 
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -19,10 +22,11 @@ from bookstore_models import OrderInfo, UserInfo, BillingInfo, CreditCardInfo
 class OrderOrchestratorService:
     """Orchestrates the checkout process across multiple microservices."""
 
-    def __init__(self, grpc_factory):
-        self.transaction_service = TransactionService(grpc_factory)
-        self.fraud_service = FraudService(grpc_factory)
-        self.suggestions_service = SuggestionsService(grpc_factory)
+    def __init__(self, grpc_factory, order_event_tracker):
+        self.order_event_tracker = order_event_tracker
+        self.transaction_service = TransactionService(grpc_factory, order_event_tracker)
+        self.fraud_service = FraudService(grpc_factory, order_event_tracker)
+        self.suggestions_service = SuggestionsService(grpc_factory, order_event_tracker)
 
     def initialize_services(
         self,
@@ -32,6 +36,13 @@ class OrderOrchestratorService:
         billing: BillingInfo,
     ) -> bool:
         """Initialize all required services before final processing."""
+
+        # first initialize the vector clock
+        self.order_event_tracker.initialize_order(order.order_id)
+        self.order_event_tracker.record_event(
+            order.order_id, "orchestrator", "initialize_order"
+        )
+
         tx_init_ok = self.transaction_service.initialize_order(
             order.order_id, credit_card, billing
         )
@@ -129,6 +140,9 @@ class OrderOrchestratorService:
             )
             return False, {"error": {"code": "ORDER_REJECTED", "message": error_msg}}
 
+        logger.info(
+            f"[Orchestrator] Order {order.order_id} approved. Final vector clock. {self.order_event_tracker.get_clock(order.order_id, 'orchestrator')}"
+        )
         # Success response
         return True, {
             "orderId": order.order_id,

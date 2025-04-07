@@ -24,8 +24,9 @@ from bookstore_models import ServiceResult
 class SuggestionsService:
     """Client for the book suggestions service."""
 
-    def __init__(self, grpc_factory):
+    def __init__(self, grpc_factory, order_event_tracker):
         self.grpc_factory = grpc_factory
+        self.order_event_tracker = order_event_tracker
 
     def initialize_order(
         self, order_id: str, book_tokens: List[str], user_id: str

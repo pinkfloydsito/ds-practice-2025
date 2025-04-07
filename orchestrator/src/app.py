@@ -1,3 +1,5 @@
+import os
+import sys
 import logging
 
 from flask import Flask
@@ -24,6 +26,8 @@ def create_app(config_object="config.default"):
 
     register_grpc(app)
 
+    register_vector_clock(app)
+
     register_error_handlers(app)
 
     return app
@@ -31,6 +35,18 @@ def create_app(config_object="config.default"):
 
 def register_grpc(app):
     app.grpc_factory = GrpcClientFactory()
+
+
+def register_vector_clock(app):
+    FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+    vector_clock_path = os.path.abspath(
+        os.path.join(FILE, f"../../../utils/vector_clock")
+    )
+    sys.path.insert(0, vector_clock_path)
+
+    from vector_clock import OrderEventTracker
+
+    app.order_event_tracker = OrderEventTracker()
 
 
 def register_blueprints(app):

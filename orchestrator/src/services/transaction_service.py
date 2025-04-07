@@ -22,8 +22,9 @@ from bookstore_models import CreditCardInfo, BillingInfo, ServiceResult
 class TransactionService:
     """Client for the transaction verification service."""
 
-    def __init__(self, grpc_factory):
+    def __init__(self, grpc_factory, order_event_tracker):
         self.grpc_factory = grpc_factory
+        self.event_tracker = order_event_tracker
 
     def initialize_order(
         self, order_id: str, credit_card: CreditCardInfo, billing: BillingInfo
@@ -35,17 +36,32 @@ class TransactionService:
                 transaction_verification_grpc.TransactionVerificationServiceStub,
                 secure=False,
             )
+
+            current_clock = self.event_tracker.get_clock(
+                order_id,
+                "orchestrator",
+            )
             request = transaction_verification.TransactionInitRequest(
                 order_id=order_id,
                 creditCardNumber=credit_card.number,
                 expiryDate=credit_card.expiry_date,
                 billingCity=billing.city,
                 billingCountry=billing.country,
+                vectorClock=current_clock,
             )
             response = stub.InitializeOrder(request)
+
+            self.event_tracker.record_event(
+                order_id=order_id,
+                service="orchestrator",
+                event_name="transaction_service.InitializeOrder",
+                received_clock=response.vectorClock,
+            )
+
             print(
                 f"[Orchestrator] initialize_transaction_order => success={response.success}"
             )
+
             return response.success
         except grpc.RpcError as e:
             print(
@@ -64,14 +80,30 @@ class TransactionService:
                 transaction_verification_grpc.TransactionVerificationServiceStub,
                 secure=False,
             )
+
+            current_clock = self.event_tracker.get_clock(
+                order_id,
+                "orchestrator",
+            )
+
             request = transaction_verification.TransactionRequest(
                 order_id=order_id,
                 creditCardNumber=credit_card.number,
                 expiryDate=credit_card.expiry_date,
                 billingCity=billing.city,
                 billingCountry=billing.country,
+                vectorClock=current_clock,
             )
+
             response = stub.VerifyTransaction(request)
+
+            self.event_tracker.record_event(
+                order_id=order_id,
+                service="orchestrator",
+                event_name="transaction_service.InitializeOrder",
+                received_clock=response.vectorClock,
+            )
+
             result.data = MessageToDict(response)
             result.success = result.data.get("isValid", False)
             if not result.success:
