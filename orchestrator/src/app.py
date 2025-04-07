@@ -29,7 +29,7 @@ def greet(grpc_factory, name="you"):
     try:
         # Get the appropriate stub
         stub = grpc_factory.get_stub(
-            "fraud_detection", fraud_detection_grpc.HelloServiceStub, secure=False
+            "fraud_detection", fraud_detection_grpc.FraudDetectionServiceStub, secure=False
         )
 
         # Make the call with timeout

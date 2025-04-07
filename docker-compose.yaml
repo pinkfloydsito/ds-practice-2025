@@ -89,6 +89,8 @@ services:
     container_name: bookstore_postgres
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
+      - ./db/dummy_data/bookstore.sql:/docker-entrypoint-initdb.d/bookstore.sql 
     env_file:
       - .env
     ports:
@@ -118,3 +120,48 @@ services:
       - ./utils:/app/utils
       # Mount the transection_verification/src directory in the current directory to the /app/transection_verification/src directory in the container
       - ./transaction_verification/src:/app/transaction_verification/src
+  
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  order_executor:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./order_executor/Dockerfile
+    depends_on:
+      - suggestions
+      - transaction_verification
+      - fraud_detection
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - NODE_ID=${NODE_ID}
+      - PYTHONFILE=/app/order_executor/src/app.py
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    command: ["python", "order_executor/src/app.py"]
+    
+  order_debug:
+    build:
+      context: .
+      dockerfile: ./order_executor/Dockerfile
+    volumes:
+      - ./order_executor/src:/app/order_executor/src
+      - ./utils:/app/utils
+    command: ["python", "order_executor/src/debug.py"]
+
+
+volumes:
+    redis_data:
+
+  
+
+
