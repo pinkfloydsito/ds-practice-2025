@@ -1,12 +1,14 @@
 import logging
 
-from flask import Flask, request, current_app
+from flask import Flask
 from flask_cors import CORS
 
 from error_handlers import register_error_handlers
 from grpc_client_factory import GrpcClientFactory
 
 from utils.logging import configure_logging
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(config_object="config.default"):
