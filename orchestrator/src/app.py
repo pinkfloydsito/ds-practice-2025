@@ -39,7 +39,7 @@ def greet(grpc_factory, name="you"):
         raise
 
 
-def create_app(config_object="config"):
+def create_app(config_object="config.default"):
     app = Flask(__name__)
 
     configure_logging(app)
