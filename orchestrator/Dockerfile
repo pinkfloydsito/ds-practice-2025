@@ -13,4 +13,4 @@ COPY ./utils /app/utils
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set the command to run the container
-CMD python utils/other/hotreload.py "orchestrator/src/app.py"
+CMD python utils/other/hotreload.py "orchestrator/src/wsgi.py"

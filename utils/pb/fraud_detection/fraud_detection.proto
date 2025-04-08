@@ -21,12 +21,12 @@ message FraudInitRequest {
     string billing_city = 5;
     string payment_method = 6;
     string order_id = 7;
-    // Optionally a vector clock or more data
+    map<string, int32> vectorClock = 8; 
 }
 
 message FraudInitResponse {
     bool success = 1;
-    // Possibly a map<string,int32> vector_clock = 2;
+    map<string, int32> vectorClock = 2; 
 }
 
 
@@ -39,6 +39,7 @@ message FraudRequest {
     string billing_city = 5;
     string payment_method = 6;
     string order_id = 7;
+    map<string, int32> vectorClock = 8; 
 }
 
 message FraudResponse {
@@ -46,4 +47,5 @@ message FraudResponse {
     string action = 2;
     google.protobuf.Struct details = 3;
     repeated string reasons = 4;
+    map<string, int32> vectorClock = 5; 
 }

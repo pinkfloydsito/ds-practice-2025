@@ -37,6 +37,7 @@ except:
     model.save(model_path)
     print(f"Model downloaded and saved to {model_path}")
 
+
 def find_similar_books(tokens: List[str], top_n=5):
     """Find books similar to the given tokens using embeddings."""
     Session = sessionmaker(bind=engine)
@@ -58,12 +59,13 @@ def find_similar_books(tokens: List[str], top_n=5):
     finally:
         session.close()
 
+
 class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
     def __init__(self):
         # Dictionary to store data from 'InitializeOrder' calls
         self.orders = {}
+        self.service_name = "book_suggestion"
 
-    # NEW method
     def InitializeOrder(self, request, context):
         """
         Cache the order data, so we won't do final logic now.
@@ -72,9 +74,11 @@ class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
         order_id = request.order_id
         self.orders[order_id] = {
             "book_tokens": list(request.book_tokens),
-            "user_id": request.user_id
+            "user_id": request.user_id,
         }
-        print(f"[Suggestions] Initialized order {order_id} with tokens={request.book_tokens}, user_id={request.user_id}")
+        print(
+            f"[Suggestions] Initialized order {order_id} with tokens={request.book_tokens}, user_id={request.user_id}"
+        )
         return book_suggestion.SuggestionInitResponse(success=True)
 
     def GetSuggestions(self, request, context):
@@ -111,6 +115,7 @@ class BookSuggestionService(book_suggestion_grpc.BookSuggestionServicer):
         print(f"[Suggestions] order={request.order_id}, result: {books}")
         return response
 
+
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor())
     book_suggestion_grpc.add_BookSuggestionServicer_to_server(
@@ -121,6 +126,7 @@ def serve():
     server.start()
     print("Server started. Listening on port 50053.")
     server.wait_for_termination()
+
 
 if __name__ == "__main__":
     serve()
