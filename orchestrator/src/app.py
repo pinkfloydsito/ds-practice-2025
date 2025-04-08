@@ -12,6 +12,32 @@ from utils.logging import configure_logging
 
 logger = logging.getLogger(__name__)
 
+FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+grpc_path = os.path.abspath(os.path.join(FILE, "../../../utils/pb/fraud_detection"))
+vector_clock_path = os.path.abspath(os.path.join(FILE, "../../../utils/vector_clock"))
+sys.path.insert(0, grpc_path)
+sys.path.insert(0, vector_clock_path)
+
+import fraud_detection_pb2 as fraud_detection
+import fraud_detection_pb2_grpc as fraud_detection_grpc
+
+def greet(grpc_factory, name="you"):
+    try:
+        # Get the appropriate stub
+        stub = grpc_factory.get_stub(
+            "fraud_detection", fraud_detection_grpc.FraudDetectionServiceStub, secure=False
+        )
+
+        # Make the call with timeout
+        response = stub.SayHello(
+            fraud_detection.HelloRequest(name=name),
+            timeout=grpc_factory.default_timeout,
+        )
+        return response.greeting
+    except fraud_detection_grpc.RpcError as e:
+        logging.error(f"gRPC error: {e.code()}: {e.details()}")
+        raise
+
 
 def create_app(config_object="config.default"):
     app = Flask(__name__)

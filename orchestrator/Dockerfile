@@ -7,6 +7,7 @@ WORKDIR /app
 
 # Copy the requirements file to the working directory
 COPY ./orchestrator/requirements.txt .
+COPY ./utils /app/utils
 
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
