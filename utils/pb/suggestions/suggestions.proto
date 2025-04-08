@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 service BookSuggestion {
     rpc InitializeOrder (SuggestionInitRequest) returns (SuggestionInitResponse);
     rpc GetSuggestions (RecommendationRequest) returns (RecommendationResponse);
+    rpc ClearOrder(ClearOrderRequest) returns (ClearOrderResponse);
 }
 
 message SuggestionInitRequest {
@@ -44,4 +45,15 @@ message Book {
   string description = 4;
   repeated string genres = 6;
   google.protobuf.Timestamp publish_date = 7;
+}
+
+message ClearOrderRequest {
+    string order_id = 1;
+    map<string, int32> vectorClock = 2;
+}
+
+message ClearOrderResponse {
+    bool success = 1;
+    string error = 2;
+    map<string, int32> vectorClock = 3;
 }

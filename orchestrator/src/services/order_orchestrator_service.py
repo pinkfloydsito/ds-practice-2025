@@ -1,7 +1,7 @@
 import logging
 import sys
 import os
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -54,6 +54,71 @@ class OrderOrchestratorService:
         )
 
         return tx_init_ok and fraud_init_ok and sugg_init_ok
+
+    def _get_final_vector_clock(self, order_id: str) -> Dict[str, int]:
+        """Get the final vector clock for the order."""
+        return self.order_event_tracker.get_clock(order_id, "orchestrator")
+
+    def _clear_service_data(
+        self, service, order_id: str, final_vector_clock: Dict[str, int]
+    ) -> bool:
+        """Clear data for a specific service with the final vector clock."""
+        try:
+            print(
+                f"[Orchestrator] Broadcasting clear order to {service.__class__.__name__} for order {order_id}"
+            )
+            result = service.clear_order_data(order_id, final_vector_clock)
+            print(
+                f"[Orchestrator] Clear order result from {service.__class__.__name__}: {result}"
+            )
+            return result
+        except Exception as e:
+            logger.error(
+                f"Error clearing data for service {service.__class__.__name__}: {str(e)}"
+            )
+            return False
+
+    def broadcast_clear_order(self, order_id: str) -> Tuple[bool, List[str]]:
+        """
+        Broadcast to all services to clear the order data with the final vector clock.
+
+        Args:
+            order_id: The ID of the order to clear
+
+        Returns:
+            Tuple of (success, list of errors)
+        """
+        errors = []
+        final_vector_clock = self._get_final_vector_clock(order_id)
+
+        # Record final event before clearing
+        self.order_event_tracker.record_event(
+            order_id, "orchestrator", "broadcast_clear_order"
+        )
+
+        # Get the updated final vector clock after recording the event
+        final_vector_clock = self._get_final_vector_clock(order_id)
+
+        print(
+            f"[Orchestrator] Broadcasting clear order for {order_id} with final vector clock: {final_vector_clock}"
+        )
+
+        # Clear data for each service
+        services = [
+            self.transaction_service,
+            self.fraud_service,
+            self.suggestions_service,
+        ]
+
+        success = True
+        for service in services:
+            if not self._clear_service_data(service, order_id, final_vector_clock):
+                service_name = service.__class__.__name__
+                error_msg = f"Failed to clear order data for {service_name}"
+                errors.append(error_msg)
+                success = False
+
+        return success, errors
 
     def process_order(
         self,
@@ -117,6 +182,14 @@ class OrderOrchestratorService:
             for _ in as_completed(futures):
                 pass  # Wait for all to complete
 
+        # worker threads completed. Now we try to clear the order data
+        broadcast_success, broadcast_errors = self.broadcast_clear_order(order.order_id)
+
+        if not broadcast_success:
+            print(
+                f"Failed to clear some order data: {broadcast_errors}"
+            )  # not hard-fail
+
         # errors (?)
         if errors:
             return False, {
@@ -140,9 +213,12 @@ class OrderOrchestratorService:
             )
             return False, {"error": {"code": "ORDER_REJECTED", "message": error_msg}}
 
-        logger.info(
+        print(
             f"[Orchestrator] Order {order.order_id} approved. Final vector clock. {self.order_event_tracker.get_clock(order.order_id, 'orchestrator')}"
         )
+
+        # XXX: enqueue the message to send to the order_executor
+
         # Success response
         return True, {
             "orderId": order.order_id,

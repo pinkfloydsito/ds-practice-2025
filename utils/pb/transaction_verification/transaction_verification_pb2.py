@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"\xd2\x02\n\x16TransactionInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x18\n\x10\x63reditCardNumber\x18\x02 \x01(\t\x12\x12\n\nexpiryDate\x18\x03 \x01(\t\x12\x15\n\rbillingStreet\x18\x04 \x01(\t\x12\x13\n\x0b\x62illingCity\x18\x05 \x01(\t\x12\x14\n\x0c\x62illingState\x18\x06 \x01(\t\x12\x12\n\nbillingZip\x18\x07 \x01(\t\x12\x16\n\x0e\x62illingCountry\x18\x08 \x01(\t\x12V\n\x0bvectorClock\x18\t \x03(\x0b\x32\x41.transaction_verification.TransactionInitRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xb7\x01\n\x17TransactionInitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12W\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x42.transaction_verification.TransactionInitResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xb3\x02\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\x12\x10\n\x08order_id\x18\x03 \x01(\t\x12\x13\n\x0b\x62illingCity\x18\x04 \x01(\t\x12\x14\n\x0c\x62illingState\x18\x05 \x01(\t\x12\x12\n\nbillingZip\x18\x06 \x01(\t\x12\x16\n\x0e\x62illingCountry\x18\x07 \x01(\t\x12R\n\x0bvectorClock\x18\x08 \x03(\x0b\x32=.transaction_verification.TransactionRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xbf\x01\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t\x12S\n\x0bvectorClock\x18\x03 \x03(\x0b\x32>.transaction_verification.TransactionResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\x32\x8a\x02\n\x1eTransactionVerificationService\x12v\n\x0fInitializeOrder\x12\x30.transaction_verification.TransactionInitRequest\x1a\x31.transaction_verification.TransactionInitResponse\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1etransaction_verification.proto\x12\x18transaction_verification\"\xd2\x02\n\x16TransactionInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x18\n\x10\x63reditCardNumber\x18\x02 \x01(\t\x12\x12\n\nexpiryDate\x18\x03 \x01(\t\x12\x15\n\rbillingStreet\x18\x04 \x01(\t\x12\x13\n\x0b\x62illingCity\x18\x05 \x01(\t\x12\x14\n\x0c\x62illingState\x18\x06 \x01(\t\x12\x12\n\nbillingZip\x18\x07 \x01(\t\x12\x16\n\x0e\x62illingCountry\x18\x08 \x01(\t\x12V\n\x0bvectorClock\x18\t \x03(\x0b\x32\x41.transaction_verification.TransactionInitRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xb7\x01\n\x17TransactionInitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12W\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x42.transaction_verification.TransactionInitResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xb3\x02\n\x12TransactionRequest\x12\x18\n\x10\x63reditCardNumber\x18\x01 \x01(\t\x12\x12\n\nexpiryDate\x18\x02 \x01(\t\x12\x10\n\x08order_id\x18\x03 \x01(\t\x12\x13\n\x0b\x62illingCity\x18\x04 \x01(\t\x12\x14\n\x0c\x62illingState\x18\x05 \x01(\t\x12\x12\n\nbillingZip\x18\x06 \x01(\t\x12\x16\n\x0e\x62illingCountry\x18\x07 \x01(\t\x12R\n\x0bvectorClock\x18\x08 \x03(\x0b\x32=.transaction_verification.TransactionRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xbf\x01\n\x13TransactionResponse\x12\x0f\n\x07isValid\x18\x01 \x01(\x08\x12\x0e\n\x06reason\x18\x02 \x01(\t\x12S\n\x0bvectorClock\x18\x03 \x03(\x0b\x32>.transaction_verification.TransactionResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xac\x01\n\x11\x43learOrderRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12Q\n\x0bvectorClock\x18\x02 \x03(\x0b\x32<.transaction_verification.ClearOrderRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xbc\x01\n\x12\x43learOrderResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t\x12R\n\x0bvectorClock\x18\x03 \x03(\x0b\x32=.transaction_verification.ClearOrderResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\x32\xf3\x02\n\x1eTransactionVerificationService\x12v\n\x0fInitializeOrder\x12\x30.transaction_verification.TransactionInitRequest\x1a\x31.transaction_verification.TransactionInitResponse\x12p\n\x11VerifyTransaction\x12,.transaction_verification.TransactionRequest\x1a-.transaction_verification.TransactionResponse\x12g\n\nClearOrder\x12+.transaction_verification.ClearOrderRequest\x1a,.transaction_verification.ClearOrderResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -39,6 +39,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_TRANSACTIONREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
   _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
   _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
   _globals['_TRANSACTIONINITREQUEST']._serialized_start=61
   _globals['_TRANSACTIONINITREQUEST']._serialized_end=399
   _globals['_TRANSACTIONINITREQUEST_VECTORCLOCKENTRY']._serialized_start=349
@@ -55,6 +59,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_TRANSACTIONRESPONSE']._serialized_end=1089
   _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_start=349
   _globals['_TRANSACTIONRESPONSE_VECTORCLOCKENTRY']._serialized_end=399
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=1092
-  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=1358
+  _globals['_CLEARORDERREQUEST']._serialized_start=1092
+  _globals['_CLEARORDERREQUEST']._serialized_end=1264
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_start=349
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_end=399
+  _globals['_CLEARORDERRESPONSE']._serialized_start=1267
+  _globals['_CLEARORDERRESPONSE']._serialized_end=1455
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_start=349
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_end=399
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_start=1458
+  _globals['_TRANSACTIONVERIFICATIONSERVICE']._serialized_end=1829
 # @@protoc_insertion_point(module_scope)

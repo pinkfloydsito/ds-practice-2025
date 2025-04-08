@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11suggestions.proto\x12\x0b\x62ooksuggest\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcb\x01\n\x15SuggestionInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x13\n\x0b\x62ook_tokens\x18\x02 \x03(\t\x12\r\n\x05limit\x18\x03 \x01(\x05\x12H\n\x0bvectorClock\x18\x04 \x03(\x0b\x32\x33.booksuggest.SuggestionInitRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xa8\x01\n\x16SuggestionInitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12I\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x34.booksuggest.SuggestionInitResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xa7\x01\n\x15RecommendationRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12H\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x33.booksuggest.RecommendationRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xcd\x01\n\x16RecommendationResponse\x12\x34\n\x0frecommendations\x18\x01 \x03(\x0b\x32\x1b.booksuggest.Recommendation\x12I\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x34.booksuggest.RecommendationResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"[\n\x0eRecommendation\x12\x1f\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x11.booksuggest.Book\x12\x18\n\x10\x63onfidence_score\x18\x02 \x01(\x02\x12\x0e\n\x06reason\x18\x03 \x01(\t\"\x88\x01\n\x04\x42ook\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06genres\x18\x06 \x03(\t\x12\x30\n\x0cpublish_date\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp2\xc7\x01\n\x0e\x42ookSuggestion\x12Z\n\x0fInitializeOrder\x12\".booksuggest.SuggestionInitRequest\x1a#.booksuggest.SuggestionInitResponse\x12Y\n\x0eGetSuggestions\x12\".booksuggest.RecommendationRequest\x1a#.booksuggest.RecommendationResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11suggestions.proto\x12\x0b\x62ooksuggest\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcb\x01\n\x15SuggestionInitRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x13\n\x0b\x62ook_tokens\x18\x02 \x03(\t\x12\r\n\x05limit\x18\x03 \x01(\x05\x12H\n\x0bvectorClock\x18\x04 \x03(\x0b\x32\x33.booksuggest.SuggestionInitRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xa8\x01\n\x16SuggestionInitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12I\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x34.booksuggest.SuggestionInitResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xa7\x01\n\x15RecommendationRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12H\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x33.booksuggest.RecommendationRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xcd\x01\n\x16RecommendationResponse\x12\x34\n\x0frecommendations\x18\x01 \x03(\x0b\x32\x1b.booksuggest.Recommendation\x12I\n\x0bvectorClock\x18\x02 \x03(\x0b\x32\x34.booksuggest.RecommendationResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"[\n\x0eRecommendation\x12\x1f\n\x04\x62ook\x18\x01 \x01(\x0b\x32\x11.booksuggest.Book\x12\x18\n\x10\x63onfidence_score\x18\x02 \x01(\x02\x12\x0e\n\x06reason\x18\x03 \x01(\t\"\x88\x01\n\x04\x42ook\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05title\x18\x02 \x01(\t\x12\x0e\n\x06\x61uthor\x18\x03 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x04 \x01(\t\x12\x0e\n\x06genres\x18\x06 \x03(\t\x12\x30\n\x0cpublish_date\x18\x07 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"\x9f\x01\n\x11\x43learOrderRequest\x12\x10\n\x08order_id\x18\x01 \x01(\t\x12\x44\n\x0bvectorClock\x18\x02 \x03(\x0b\x32/.booksuggest.ClearOrderRequest.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\"\xaf\x01\n\x12\x43learOrderResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05\x65rror\x18\x02 \x01(\t\x12\x45\n\x0bvectorClock\x18\x03 \x03(\x0b\x32\x30.booksuggest.ClearOrderResponse.VectorClockEntry\x1a\x32\n\x10VectorClockEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x05:\x02\x38\x01\x32\x96\x02\n\x0e\x42ookSuggestion\x12Z\n\x0fInitializeOrder\x12\".booksuggest.SuggestionInitRequest\x1a#.booksuggest.SuggestionInitResponse\x12Y\n\x0eGetSuggestions\x12\".booksuggest.RecommendationRequest\x1a#.booksuggest.RecommendationResponse\x12M\n\nClearOrder\x12\x1e.booksuggest.ClearOrderRequest\x1a\x1f.booksuggest.ClearOrderResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -40,6 +40,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RECOMMENDATIONREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
   _globals['_RECOMMENDATIONRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
   _globals['_RECOMMENDATIONRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_options = b'8\001'
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._loaded_options = None
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_options = b'8\001'
   _globals['_SUGGESTIONINITREQUEST']._serialized_start=68
   _globals['_SUGGESTIONINITREQUEST']._serialized_end=271
   _globals['_SUGGESTIONINITREQUEST_VECTORCLOCKENTRY']._serialized_start=221
@@ -60,6 +64,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RECOMMENDATION']._serialized_end=913
   _globals['_BOOK']._serialized_start=916
   _globals['_BOOK']._serialized_end=1052
-  _globals['_BOOKSUGGESTION']._serialized_start=1055
-  _globals['_BOOKSUGGESTION']._serialized_end=1254
+  _globals['_CLEARORDERREQUEST']._serialized_start=1055
+  _globals['_CLEARORDERREQUEST']._serialized_end=1214
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_start=221
+  _globals['_CLEARORDERREQUEST_VECTORCLOCKENTRY']._serialized_end=271
+  _globals['_CLEARORDERRESPONSE']._serialized_start=1217
+  _globals['_CLEARORDERRESPONSE']._serialized_end=1392
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_start=221
+  _globals['_CLEARORDERRESPONSE_VECTORCLOCKENTRY']._serialized_end=271
+  _globals['_BOOKSUGGESTION']._serialized_start=1395
+  _globals['_BOOKSUGGESTION']._serialized_end=1673
 # @@protoc_insertion_point(module_scope)

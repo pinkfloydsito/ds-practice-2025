@@ -44,6 +44,11 @@ class BookSuggestionStub(object):
                 request_serializer=suggestions__pb2.RecommendationRequest.SerializeToString,
                 response_deserializer=suggestions__pb2.RecommendationResponse.FromString,
                 _registered_method=True)
+        self.ClearOrder = channel.unary_unary(
+                '/booksuggest.BookSuggestion/ClearOrder',
+                request_serializer=suggestions__pb2.ClearOrderRequest.SerializeToString,
+                response_deserializer=suggestions__pb2.ClearOrderResponse.FromString,
+                _registered_method=True)
 
 
 class BookSuggestionServicer(object):
@@ -61,6 +66,12 @@ class BookSuggestionServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ClearOrder(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_BookSuggestionServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -73,6 +84,11 @@ def add_BookSuggestionServicer_to_server(servicer, server):
                     servicer.GetSuggestions,
                     request_deserializer=suggestions__pb2.RecommendationRequest.FromString,
                     response_serializer=suggestions__pb2.RecommendationResponse.SerializeToString,
+            ),
+            'ClearOrder': grpc.unary_unary_rpc_method_handler(
+                    servicer.ClearOrder,
+                    request_deserializer=suggestions__pb2.ClearOrderRequest.FromString,
+                    response_serializer=suggestions__pb2.ClearOrderResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -129,6 +145,33 @@ class BookSuggestion(object):
             '/booksuggest.BookSuggestion/GetSuggestions',
             suggestions__pb2.RecommendationRequest.SerializeToString,
             suggestions__pb2.RecommendationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ClearOrder(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/booksuggest.BookSuggestion/ClearOrder',
+            suggestions__pb2.ClearOrderRequest.SerializeToString,
+            suggestions__pb2.ClearOrderResponse.FromString,
             options,
             channel_credentials,
             insecure,

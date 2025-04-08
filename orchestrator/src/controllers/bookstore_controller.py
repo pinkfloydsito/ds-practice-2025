@@ -1,8 +1,6 @@
 import os
 import sys
 import uuid
-import requests
-import grpc
 from flask import Blueprint, request, jsonify, current_app
 from marshmallow import ValidationError
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,7 +13,6 @@ from schema import (
     OrderStatusResponseSchema,
 )
 
-from utils.grpc_config import GrpcConfig
 from services.order_orchestrator_service import OrderOrchestratorService
 
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")

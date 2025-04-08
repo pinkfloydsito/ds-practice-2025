@@ -143,14 +143,14 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
             "payment_method": request.payment_method,
         }
 
-        logger.info(
+        print(
             f"[FraudDetection] Initialized order {order_id} with data: {self.orders[order_id]}"
         )
 
         received_clock = dict(request.vectorClock)
         if not self.order_event_tracker.order_exists(order_id):
             self.order_event_tracker.initialize_order(order_id)
-            logger.info(
+            print(
                 f"[TransactionVerification] Initialized order {order_id} with vector clock {received_clock}"
             )
 
@@ -175,7 +175,7 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
         # If missing, either fallback or reject
         if not stored:
             # fallback or partial logic using request
-            logger.info(
+            print(
                 f"[FraudDetection] order_id {order_id} not found in self.orders. Fallback to request data."
             )
             # If we want to just do immediate logic:
@@ -212,7 +212,7 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
             received_clock=received_clock,
         )
 
-        logger.info(
+        print(
             f"[FraudDetection] Response: action={action}, reasons={reasons}, details={details}, , Updated Clock: {updated_clock}"
         )
 
@@ -224,6 +224,56 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
             vectorClock=updated_clock,
         )
         return response
+
+    def ClearOrder(self, request, context):
+        order_id = request.order_id
+        received_clock = dict(request.vectorClock)
+        if order_id not in self.orders:
+            print(
+                f"[FraudDetection] Order {order_id} not found for clearing - already cleared or never existed"
+            )
+            # unlikely to happen but need to handle it. Create a response with success=True since the data is already gone
+            updated_clock = self.order_event_tracker.record_event(
+                order_id=order_id,
+                service=self.service_name,
+                event_name=self.service_name + ".ClearOrder",
+                received_clock=received_clock,
+            )
+
+            return fd_pb2.ClearOrderResponse(success=True, vectorClock=updated_clock)
+
+        local_clock = self.order_event_tracker.get_clock(order_id, self.service_name)
+
+        for service, count in local_clock.items():
+            if service in received_clock:
+                if count > received_clock[service]:
+                    error_msg = f"Vector clock mismatch for {service}: local={count}, received={received_clock[service]}"
+                    print(f"[FraudDetection] {error_msg}")
+                    return fd_pb2.ClearOrderResponse(
+                        success=False, error=error_msg, vectorClock=local_clock
+                    )
+
+        try:
+            # delete order data
+            del self.orders[order_id]
+
+            # Record this clearing event
+            updated_clock = self.order_event_tracker.record_event(
+                order_id=order_id,
+                service=self.service_name,
+                event_name=self.service_name + ".ClearOrder",
+                received_clock=received_clock,
+            )
+
+            print(f"[FraudDetection] Successfully cleared order {order_id}")
+            return fd_pb2.ClearOrderResponse(success=True, vectorClock=updated_clock)
+
+        except Exception as e:
+            error_msg = f"Error clearing order data: {str(e)}"
+            print(f"[FraudDetection] {error_msg}")
+            return fd_pb2.ClearOrderResponse(
+                success=False, error=error_msg, vectorClock=local_clock
+            )
 
 
 def serve():

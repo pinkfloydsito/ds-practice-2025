@@ -95,3 +95,35 @@ class FraudResponse(_message.Message):
     reasons: _containers.RepeatedScalarFieldContainer[str]
     vectorClock: _containers.ScalarMap[str, int]
     def __init__(self, fraud_probability: _Optional[float] = ..., action: _Optional[str] = ..., details: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., reasons: _Optional[_Iterable[str]] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
+
+class ClearOrderRequest(_message.Message):
+    __slots__ = ("order_id", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, order_id: _Optional[str] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
+
+class ClearOrderResponse(_message.Message):
+    __slots__ = ("success", "error", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    error: str
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, success: bool = ..., error: _Optional[str] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
