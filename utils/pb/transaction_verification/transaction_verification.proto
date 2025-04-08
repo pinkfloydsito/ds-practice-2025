@@ -17,11 +17,12 @@ message TransactionInitRequest {
   string billingState = 6;
   string billingZip = 7;
   string billingCountry = 8;
+  map<string, int32> vectorClock = 9;
 }
 
 message TransactionInitResponse {
   bool success = 1;
-  // Possibly a map<string,int32> vector_clock = 2; if you do vector clocks
+  map<string, int32> vectorClock = 2; 
 }
 
 // Request message
@@ -33,10 +34,12 @@ message TransactionRequest {
   string billingState = 5;
   string billingZip = 6;
   string billingCountry = 7;
+  map<string, int32> vectorClock = 8; 
 }
 
 // Response message
 message TransactionResponse {
   bool isValid = 1;
   string reason = 2; 
+  map<string, int32> vectorClock = 3; 
 }

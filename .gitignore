@@ -4,3 +4,4 @@ books.csv
 postgres_data/
 ai/
 .vscode/
+logs/

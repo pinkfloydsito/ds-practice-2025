@@ -1,89 +1,75 @@
-import sys
 import os
-
-import grpc
+import sys
 import logging
 
-from flask import Flask, request, current_app
+from flask import Flask
 from flask_cors import CORS
 
+from error_handlers import register_error_handlers
 from grpc_client_factory import GrpcClientFactory
 
+from utils.logging import configure_logging
 
-# This set of lines are needed to import the gRPC stubs.
-# The path of the stubs is relative to the current file, or absolute inside the container.
-# Change these lines only if strictly needed.
-
-microservices = ["fraud_detection"]
-
-for microservice in microservices:
-    FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-    grpc_path = os.path.abspath(os.path.join(FILE, f"../../../utils/pb/{microservice}"))
-    sys.path.insert(0, grpc_path)
-
-import fraud_detection_pb2 as fraud_detection
-import fraud_detection_pb2_grpc as fraud_detection_grpc
+logger = logging.getLogger(__name__)
 
 
-def greet(grpc_factory, name="you"):
-    try:
-        # Get the appropriate stub
-        stub = grpc_factory.get_stub(
-            "fraud_detection", fraud_detection_grpc.HelloServiceStub, secure=False
-        )
-
-        # Make the call with timeout
-        response = stub.SayHello(
-            fraud_detection.HelloRequest(name=name),
-            timeout=grpc_factory.default_timeout,
-        )
-        return response.greeting
-    except grpc.RpcError as e:
-        logging.error(f"gRPC error: {e.code()}: {e.details()}")
-        raise
-
-
-def create_app():
+def create_app(config_object="config.default"):
     app = Flask(__name__)
-    app.grpc_factory = GrpcClientFactory()
 
-    # ✅ List of blueprints
-    blueprints = [
-        ("controllers.bookstore_controller", "bookstore_bp"),
-        ("controllers.fintech_controller", "fintech_bp"),
-    ]
+    configure_logging(app)
 
-    # Dynamically import and register blueprints
-    for module_path, bp_name in blueprints:
-        module = __import__(module_path, fromlist=[bp_name])
-        blueprint = getattr(module, bp_name)
-        app.register_blueprint(blueprint)
+    configure_cors(app)
 
-    # ✅ Register error handlers
-    from error_handlers import register_error_handlers
+    app.config.from_object(config_object)
+
+    register_blueprints(app)
+
+    register_grpc(app)
+
+    register_vector_clock(app)
 
     register_error_handlers(app)
 
     return app
 
 
+def register_grpc(app):
+    app.grpc_factory = GrpcClientFactory()
+
+
+def register_vector_clock(app):
+    FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+    vector_clock_path = os.path.abspath(
+        os.path.join(FILE, f"../../../utils/vector_clock")
+    )
+    sys.path.insert(0, vector_clock_path)
+
+    from vector_clock import OrderEventTracker
+
+    app.order_event_tracker = OrderEventTracker()
+
+
+def register_blueprints(app):
+    blueprints = [
+        ("controllers.bookstore_controller", "bookstore_bp"),
+        ("controllers.fintech_controller", "fintech_bp"),
+        ("controllers.health_controller", "api_bp"),
+    ]
+
+    for module_path, bp_name in blueprints:
+        module = __import__(module_path, fromlist=[bp_name])
+        blueprint = getattr(module, bp_name)
+        app.register_blueprint(blueprint)
+
+
+def configure_cors(app):
+    """Configure CORS."""
+    origins = app.config.get("CORS_ORIGINS", "*")
+    CORS(app, resources={r"/*": {"origins": origins}})
+    logging.info(f"CORS configured with origins: {origins}")
+
+
 app = create_app()
-# Enable CORS for the app.
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-
-# Define a GET endpoint.
-@app.route("/", methods=["GET"])
-def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    grpc_factory = current_app.grpc_factory
-    username = request.args.get("name") or "other"
-    response = greet(grpc_factory, name=username)
-
-    return response
 
 
 if __name__ == "__main__":
