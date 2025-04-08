@@ -7,38 +7,68 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class SuggestionInitRequest(_message.Message):
-    __slots__ = ("order_id", "book_tokens", "user_id")
+    __slots__ = ("order_id", "book_tokens", "limit", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
     ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     BOOK_TOKENS_FIELD_NUMBER: _ClassVar[int]
-    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     order_id: str
     book_tokens: _containers.RepeatedScalarFieldContainer[str]
-    user_id: str
-    def __init__(self, order_id: _Optional[str] = ..., book_tokens: _Optional[_Iterable[str]] = ..., user_id: _Optional[str] = ...) -> None: ...
+    limit: int
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, order_id: _Optional[str] = ..., book_tokens: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
 class SuggestionInitResponse(_message.Message):
-    __slots__ = ("success",)
+    __slots__ = ("success", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     success: bool
-    def __init__(self, success: bool = ...) -> None: ...
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, success: bool = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
 class RecommendationRequest(_message.Message):
-    __slots__ = ("user_id", "limit", "book_tokens", "order_id")
-    USER_ID_FIELD_NUMBER: _ClassVar[int]
-    LIMIT_FIELD_NUMBER: _ClassVar[int]
-    BOOK_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("order_id", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
     ORDER_ID_FIELD_NUMBER: _ClassVar[int]
-    user_id: str
-    limit: int
-    book_tokens: _containers.RepeatedScalarFieldContainer[str]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     order_id: str
-    def __init__(self, user_id: _Optional[str] = ..., limit: _Optional[int] = ..., book_tokens: _Optional[_Iterable[str]] = ..., order_id: _Optional[str] = ...) -> None: ...
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, order_id: _Optional[str] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
 class RecommendationResponse(_message.Message):
-    __slots__ = ("recommendations",)
+    __slots__ = ("recommendations", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
     RECOMMENDATIONS_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
     recommendations: _containers.RepeatedCompositeFieldContainer[Recommendation]
-    def __init__(self, recommendations: _Optional[_Iterable[_Union[Recommendation, _Mapping]]] = ...) -> None: ...
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, recommendations: _Optional[_Iterable[_Union[Recommendation, _Mapping]]] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
 class Recommendation(_message.Message):
     __slots__ = ("book", "confidence_score", "reason")
