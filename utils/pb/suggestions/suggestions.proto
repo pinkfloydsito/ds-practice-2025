@@ -5,35 +5,30 @@ package booksuggest;
 import "google/protobuf/timestamp.proto";
 
 service BookSuggestion {
-    // New method for initialization
     rpc InitializeOrder (SuggestionInitRequest) returns (SuggestionInitResponse);
-
-    // Existing method for final suggestions
     rpc GetSuggestions (RecommendationRequest) returns (RecommendationResponse);
 }
 
-// New message for initialization
 message SuggestionInitRequest {
   string order_id = 1;
   repeated string book_tokens = 2;
-  // Possibly other fields like user_id, etc. if you want to store them
-  string user_id = 3;
+  int32 limit = 3;
+  map<string, int32> vectorClock = 4; 
 }
 
 message SuggestionInitResponse {
   bool success = 1;
+  map<string, int32> vectorClock = 2; 
 }
 
-// Existing messages
 message RecommendationRequest {
-  string user_id = 1;
-  int32 limit = 2;
-  repeated string book_tokens = 3;
-  string order_id = 4; 
+  string order_id = 1; 
+  map<string, int32> vectorClock = 2; 
 }
 
 message RecommendationResponse {
   repeated Recommendation recommendations = 1;
+  map<string, int32> vectorClock = 2; 
 }
 
 message Recommendation {

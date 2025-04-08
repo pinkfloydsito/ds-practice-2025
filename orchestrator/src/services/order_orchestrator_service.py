@@ -50,7 +50,7 @@ class OrderOrchestratorService:
         fraud_init_ok = self.fraud_service.initialize_order(order, user, billing)
 
         sugg_init_ok = self.suggestions_service.initialize_order(
-            order.order_id, order.book_tokens, user.user_id
+            order.order_id, order.book_tokens, limit=3
         )
 
         return tx_init_ok and fraud_init_ok and sugg_init_ok
@@ -96,7 +96,7 @@ class OrderOrchestratorService:
             try:
                 print("[Orchestrator] Starting final suggestions retrieval")
                 results["suggestions"] = self.suggestions_service.get_suggestions(
-                    order.order_id, order.book_tokens, user.user_id
+                    order.order_id
                 )
                 count = (
                     len(results["suggestions"].data)

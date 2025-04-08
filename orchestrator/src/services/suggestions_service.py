@@ -1,12 +1,14 @@
 import sys
 import os
 import grpc
+import logging
 
 from typing import List
 
 from utils.grpc_config import GrpcConfig
 from google.protobuf.json_format import MessageToDict
 
+logger = logging.getLogger(__name__)
 config = GrpcConfig()
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 config.init_paths(FILE)
@@ -29,7 +31,7 @@ class SuggestionsService:
         self.order_event_tracker = order_event_tracker
 
     def initialize_order(
-        self, order_id: str, book_tokens: List[str], user_id: str
+        self, order_id: str, book_tokens: List[str], limit: int
     ) -> bool:
         """Initialize a suggestions order."""
         try:
@@ -38,13 +40,23 @@ class SuggestionsService:
                 suggestions_grpc.BookSuggestionStub,
                 secure=False,
             )
+
+            current_clock = self.order_event_tracker.get_clock(order_id, "orchestrator")
+
             request = suggestions.SuggestionInitRequest(
-                order_id=order_id, book_tokens=book_tokens, user_id=user_id
+                order_id=order_id,
+                book_tokens=book_tokens,
+                limit=limit,
+                vectorClock=current_clock,
             )
             response = stub.InitializeOrder(request)
+
+            self._record_vector_clock(order_id, "InitializeOrder", response.vectorClock)
+
             print(
-                f"[Orchestrator] initialize_suggestions_order => success={response.success}"
+                f"[Orchestrator] initialize_suggestions_order => success={response.success} and vectorClock={response.vectorClock}"
             )
+
             return response.success
         except grpc.RpcError as e:
             print(
@@ -52,21 +64,24 @@ class SuggestionsService:
             )
             return False
 
-    def get_suggestions(
-        self, order_id: str, book_tokens: List[str], user_id: str = "1", limit: int = 3
-    ) -> ServiceResult:
+    def get_suggestions(self, order_id: str) -> ServiceResult:
         """Get book suggestions."""
         result = ServiceResult()
         try:
             stub = self.grpc_factory.get_stub(
                 "suggestions", suggestions_grpc.BookSuggestionStub, secure=False
             )
+
+            current_clock = self.order_event_tracker.get_clock(order_id, "orchestrator")
+
             request = suggestions.RecommendationRequest(
-                user_id=user_id, limit=limit, book_tokens=book_tokens, order_id=order_id
+                order_id=order_id, vectorClock=current_clock
             )
             response = stub.GetSuggestions(request)
             response_dict = MessageToDict(response)
             raw_recommendations = response_dict.get("recommendations", [])
+
+            self._record_vector_clock(order_id, "GetSuggestions", response.vectorClock)
 
             formatted = []
             for rec in raw_recommendations:
@@ -83,6 +98,14 @@ class SuggestionsService:
             result.success = True
             return result
         except grpc.RpcError as e:
-            print(f"gRPC error (get_suggestions): {e.code()}: {e.details()}")
+            logger.error(f"gRPC error (get_suggestions): {e.code()}: {e.details()}")
             result.error = f"Suggestions service error: {e.details()}"
             return result
+
+    def _record_vector_clock(self, order_id, event_name: str, clock):
+        self.order_event_tracker.record_event(
+            order_id=order_id,
+            service="orchestrator",
+            event_name=event_name,
+            received_clock=dict(clock),
+        )

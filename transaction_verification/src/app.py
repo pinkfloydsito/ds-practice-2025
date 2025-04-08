@@ -28,7 +28,6 @@ from vector_clock import OrderEventTracker
 
 
 def check_luhn_algorithm(card_no):
-    # unchanged from your code
     n_digits = len(card_no)
     n_sum = 0
     is_second = False
@@ -70,10 +69,30 @@ class TransactionVerificationServiceServicer(
             "billingCountry": request.billingCountry,
         }
 
-        print(f"[TransactionVerification] Initialized order {order_id} with data:")
-        print(self.orders[order_id])
+        received_clock = dict(request.vectorClock)
 
-        return transaction_verification_pb2.TransactionInitResponse(success=True)
+        if not self.order_event_tracker.order_exists(order_id):
+            self.order_event_tracker.initialize_order(order_id)
+            logger.info(
+                f"[TransactionVerification]Initialized order {order_id} with vector clock"
+            )
+
+        print(f"[TransactionVerification] Initialized order {order_id} with data:")
+
+        updated_clock = self.order_event_tracker.record_event(
+            order_id=order_id,
+            service=self.service_name,
+            event_name="InitializeOrder",
+            received_clock=received_clock,
+        )
+
+        print(
+            f"[TransactionVerification] {self.service_name}, Order {order_id}, Event 'InitializeOrder', Updated Clock: {updated_clock}"
+        )
+
+        return transaction_verification_pb2.TransactionInitResponse(
+            success=True, vectorClock=updated_clock
+        )
 
     def VerifyTransaction(self, request, context):
         """
@@ -85,11 +104,6 @@ class TransactionVerificationServiceServicer(
         reason = "OK"
 
         received_clock = dict(request.vectorClock)
-        if not self.order_event_tracker.order_exists(order_id):
-            self.order_event_tracker.initialize_order(order_id)
-            logger.info(
-                f"[TransactionVerification]Initialized order {order_id} with vector clock"
-            )
 
         cached = self.orders.get(order_id)
         if cached:
@@ -178,7 +192,7 @@ class TransactionVerificationServiceServicer(
             received_clock=received_clock,
         )
 
-        logger.info(
+        print(
             f"[TransactionVerification] {self.service_name}, Order {order_id}, Event 'VerifyTransaction', Updated Clock: {updated_clock}"
         )
 
@@ -194,7 +208,7 @@ def serve():
     )
     server.add_insecure_port("[::]:50052")
     server.start()
-    print("[TransactionVerification] SERVICE listening on port 50052.")
+    logger.info("[TransactionVerification] SERVICE listening on port 50052.")
     server.wait_for_termination()
 
 

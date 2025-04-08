@@ -63,8 +63,8 @@ def get_country_from_ip(ip_address, reader):
     try:
         response = reader.country(ip_address)
         return response.country.name
-    except:
-        return "Unknown"
+    except Exception as e:
+        return f"Unknown error {e}"
 
 
 def predict_fraud(order_data):
@@ -74,9 +74,6 @@ def predict_fraud(order_data):
     """
     ip_address = order_data["ip_address"]
     ip_country = get_country_from_ip(ip_address, geoip_reader)
-
-    # Prepare data for the model
-    import pandas as pd
 
     input_data = pd.DataFrame(
         {
@@ -145,7 +142,8 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
             "billing_city": request.billing_city,
             "payment_method": request.payment_method,
         }
-        print(
+
+        logger.info(
             f"[FraudDetection] Initialized order {order_id} with data: {self.orders[order_id]}"
         )
 
@@ -153,7 +151,7 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
         if not self.order_event_tracker.order_exists(order_id):
             self.order_event_tracker.initialize_order(order_id)
             logger.info(
-                f"[TransactionVerification]Initialized order {order_id} with vector clock"
+                f"[TransactionVerification] Initialized order {order_id} with vector clock {received_clock}"
             )
 
         updated_clock = self.order_event_tracker.record_event(
@@ -172,11 +170,12 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
         """
         order_id = request.order_id
         stored = self.orders.get(order_id)
+        received_clock = dict(request.vectorClock)
 
         # If missing, either fallback or reject
         if not stored:
             # fallback or partial logic using request
-            print(
+            logger.info(
                 f"[FraudDetection] order_id {order_id} not found in self.orders. Fallback to request data."
             )
             # If we want to just do immediate logic:
@@ -206,16 +205,23 @@ class FraudDetectionService(fd_pb2_grpc.FraudDetectionServiceServicer):
                     f"IP location ({details['ip_country']}) doesn't match billing country ({stored['billing_country']})"
                 )
 
-        print(
-            f"[FraudDetection] Response: action={action}, reasons={reasons}, details={details}"
+        updated_clock = self.order_event_tracker.record_event(
+            order_id=order_id,
+            service=self.service_name,
+            event_name=self.service_name + ".CheckFraud",
+            received_clock=received_clock,
+        )
+
+        logger.info(
+            f"[FraudDetection] Response: action={action}, reasons={reasons}, details={details}, , Updated Clock: {updated_clock}"
         )
 
         response = fd_pb2.FraudResponse(
             fraud_probability=float(fraud_probability),
             action=action,
-            # Convert 'details' dict to google.protobuf.Struct automatically
             details=details,
             reasons=reasons,
+            vectorClock=updated_clock,
         )
         return response
 
