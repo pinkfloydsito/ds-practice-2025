@@ -10,6 +10,8 @@ service FraudDetectionService {
 
     // Existing method that does the real fraud check
     rpc CheckFraud (FraudRequest) returns (FraudResponse);
+
+    rpc ClearOrder(ClearOrderRequest) returns (ClearOrderResponse);
 }
 
 // New message for the initialization phase
@@ -48,4 +50,15 @@ message FraudResponse {
     google.protobuf.Struct details = 3;
     repeated string reasons = 4;
     map<string, int32> vectorClock = 5; 
+}
+
+message ClearOrderRequest {
+    string order_id = 1;
+    map<string, int32> vectorClock = 2;
+}
+
+message ClearOrderResponse {
+    bool success = 1;
+    string error = 2;
+    map<string, int32> vectorClock = 3;
 }

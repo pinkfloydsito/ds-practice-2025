@@ -6,6 +6,7 @@ package transaction_verification;
 service TransactionVerificationService {
   rpc InitializeOrder (TransactionInitRequest) returns (TransactionInitResponse);
   rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+  rpc ClearOrder(ClearOrderRequest) returns (ClearOrderResponse);
 }
 
 message TransactionInitRequest {
@@ -42,4 +43,15 @@ message TransactionResponse {
   bool isValid = 1;
   string reason = 2; 
   map<string, int32> vectorClock = 3; 
+}
+
+message ClearOrderRequest {
+    string order_id = 1;
+    map<string, int32> vectorClock = 2;
+}
+
+message ClearOrderResponse {
+    bool success = 1;
+    string error = 2;
+    map<string, int32> vectorClock = 3;
 }

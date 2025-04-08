@@ -73,7 +73,7 @@ class TransactionVerificationServiceServicer(
 
         if not self.order_event_tracker.order_exists(order_id):
             self.order_event_tracker.initialize_order(order_id)
-            logger.info(
+            print(
                 f"[TransactionVerification]Initialized order {order_id} with vector clock"
             )
 
@@ -115,7 +115,7 @@ class TransactionVerificationServiceServicer(
             # billing_zip = cached["billingZip"]
             billing_country = cached["billingCountry"]
         else:
-            logger.info(
+            print(
                 f"[TransactionVerification] No init data for {order_id}, fallback to request only."
             )
             credit_card_number = request.creditCardNumber
@@ -200,6 +200,60 @@ class TransactionVerificationServiceServicer(
             isValid=is_valid, reason=reason, vectorClock=updated_clock
         )
 
+    def ClearOrder(self, request, context):
+        order_id = request.order_id
+        received_clock = dict(request.vectorClock)
+        if order_id not in self.orders:
+            print(
+                f"[FraudDetection] Order {order_id} not found for clearing - already cleared or never existed"
+            )
+            # unlikely to happen but need to handle it. Create a response with success=True since the data is already gone
+            updated_clock = self.order_event_tracker.record_event(
+                order_id=order_id,
+                service=self.service_name,
+                event_name=self.service_name + ".ClearOrder",
+                received_clock=received_clock,
+            )
+
+            return transaction_verification_pb2.ClearOrderResponse(
+                success=True, vectorClock=updated_clock
+            )
+
+        local_clock = self.order_event_tracker.get_clock(order_id, self.service_name)
+
+        for service, count in local_clock.items():
+            if service in received_clock:
+                if count > received_clock[service]:
+                    error_msg = f"Vector clock mismatch for {service}: local={count}, received={received_clock[service]}"
+                    print(f"[FraudDetection] {error_msg}")
+                    return transaction_verification_pb2.ClearOrderResponse(
+                        success=False, error=error_msg, vectorClock=local_clock
+                    )
+
+        try:
+            # delete order data
+            del self.orders[order_id]
+
+            # Record this clearing event
+            updated_clock = self.order_event_tracker.record_event(
+                order_id=order_id,
+                service=self.service_name,
+                event_name=self.service_name + ".ClearOrder",
+                received_clock=received_clock,
+            )
+
+            print(f"[FraudDetection] Successfully cleared order {order_id}")
+            return transaction_verification_pb2.ClearOrderResponse(
+                success=True, vectorClock=updated_clock
+            )
+
+        except Exception as e:
+            error_msg = f"Error clearing order data: {str(e)}"
+            print(f"[FraudDetection] {error_msg}")
+            return transaction_verification_pb2.ClearOrderResponse(
+                success=False, error=error_msg, vectorClock=local_clock
+            )
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=5))
@@ -208,7 +262,7 @@ def serve():
     )
     server.add_insecure_port("[::]:50052")
     server.start()
-    logger.info("[TransactionVerification] SERVICE listening on port 50052.")
+    print("[TransactionVerification] SERVICE listening on port 50052.")
     server.wait_for_termination()
 
 

@@ -4,6 +4,7 @@ import grpc
 
 from utils.grpc_config import GrpcConfig
 from google.protobuf.json_format import MessageToDict
+from typing import Dict
 
 config = GrpcConfig()
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -113,3 +114,43 @@ class TransactionService:
             print(f"gRPC error (verify_transaction): {e.code()}: {e.details()}")
             result.error = f"Transaction service error: {e.details()}"
             return result
+
+    def clear_order_data(
+        self, order_id: str, final_vector_clock: Dict[str, int]
+    ) -> bool:
+        """
+        Clear the order data if the local vector clock is <= final_vector_clock.
+
+        Args:
+            order_id: The order ID to clear
+            final_vector_clock: The final vector clock from the orchestrator
+
+        Returns:
+            bool: True if cleared successfully, False otherwise
+        """
+        try:
+            stub = self.grpc_factory.get_stub(
+                "transaction_verification",
+                transaction_verification_grpc.TransactionVerificationServiceStub,
+                secure=False,
+            )
+
+            # Call the ClearOrder method on the gRPC service
+            response = stub.ClearOrder(
+                transaction_verification.ClearOrderRequest(
+                    order_id=order_id, vectorClock=final_vector_clock
+                )
+            )
+
+            # Verify the response
+            if not response or not response.success:
+                error_msg = response.error if response else "Unknown error"
+                print(f"Failed to clear order data: {error_msg}")
+                return False
+
+            print(f"Successfully cleared order data for order {order_id}")
+            return True
+
+        except Exception as e:
+            print(f"[Orchestrator] Error clearing order data: {str(e)}")
+            return False
