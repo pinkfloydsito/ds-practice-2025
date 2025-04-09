@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import threading
 from typing import Any, Dict, Tuple, List
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -132,20 +133,52 @@ class OrderOrchestratorService:
         results = {"verification": None, "fraud": None, "suggestions": None}
         errors = []
 
-        # Worker functions for each microservice
+        # event signaling
+        # event_completed = {
+        #     "fraud": threading.Event(),
+        #     "verify": threading.Event(),
+        # }
+
+        fraud_flag = threading.Event()
+        verify_flag = threading.Event()
+        early_termination = threading.Event()
+        results_lock = threading.Lock()
+
+        # workers
         def verification_worker():
             try:
                 print(
                     f"[Orchestrator] Starting final VerifyTransaction for card: {credit_card.number}"
                 )
-                results["verification"] = self.transaction_service.verify_transaction(
+                verification_result = self.transaction_service.verify_transaction(
                     order.order_id, credit_card, billing
                 )
-                print(
-                    f"[Orchestrator] Verification final result: {results['verification'].success}"
-                )
+
+                with results_lock:
+                    results["verification"] = verification_result
+
+                    print(
+                        f"[Orchestrator] Verification final result: {results['verification'].success}"
+                    )
+
+                    if not verification_result.success:
+                        error_msg = (
+                            verification_result.error
+                            if verification_result
+                            else "Transaction verification failed"
+                        )
+                        errors.append(error_msg)
+                        early_termination.set()
+                        print(
+                            "[Orchestrator] Transaction verification failed - signaling early termination"
+                        )
             except Exception as e:
                 errors.append(f"Transaction verification error: {str(e)}")
+
+            finally:
+                # signal
+                verify_flag.set()
+                print("[Orchestrator] Verification worker completed")
 
         def fraud_worker():
             try:
@@ -157,8 +190,19 @@ class OrderOrchestratorService:
             except Exception as e:
                 errors.append(f"Fraud detection error: {str(e)}")
 
+            finally:
+                # signal
+                fraud_flag.set()
+                print("[Orchestrator] Fraud worker completed")
+
         def suggestions_worker():
             try:
+                fraud_flag.wait()
+                verify_flag.wait()
+
+                if early_termination.is_set():
+                    return
+
                 print("[Orchestrator] Starting final suggestions retrieval")
                 results["suggestions"] = self.suggestions_service.get_suggestions(
                     order.order_id
@@ -172,15 +216,38 @@ class OrderOrchestratorService:
             except Exception as e:
                 errors.append(f"Suggestions error: {str(e)}")
 
+        futures = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [
-                executor.submit(verification_worker),
-                executor.submit(fraud_worker),
-                executor.submit(suggestions_worker),
-            ]
+            futures["verification"] = executor.submit(verification_worker)
+            futures["fraud"] = executor.submit(fraud_worker)
+            futures["suggestions"] = executor.submit(suggestions_worker)
 
-            for _ in as_completed(futures):
-                pass  # Wait for all to complete
+            # check for early termination
+            def check_early_termination():
+                while not all(future.done() for future in futures.values()):
+                    if early_termination.is_set():
+                        # cancel pending futures
+                        for name, future in futures.items():
+                            if not future.done():
+                                print(
+                                    f"[Orchestrator] Canceling {name} worker due to early termination"
+                                )
+                                future.cancel()
+                        break
+                    # timeout to avoid busy waiting
+                    early_termination.wait(0.05)
+
+            # Start the early termination checker
+            termination_checker = threading.Thread(target=check_early_termination)
+            termination_checker.daemon = True
+            termination_checker.start()
+
+            # Wait for all futures to complete (or be canceled)
+            for _ in as_completed(list(futures.values())):
+                pass
+
+            # Wait for the termination checker to finish
+            termination_checker.join(timeout=1.0)
 
         # worker threads completed. Now we try to clear the order data
         broadcast_success, broadcast_errors = self.broadcast_clear_order(order.order_id)
