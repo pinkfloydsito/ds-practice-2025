@@ -107,14 +107,55 @@ def call_suggestions(order):
         print(f"  🔹 {rec.book.description} by {rec.book.author}")
 
 def call_transaction_verification(order):
+    """
+    Updated approach: 
+      1) InitializeOrder
+      2) CheckBilling
+      3) CheckCard
+    If both succeed, we log success. Otherwise, we log an error.
+    """
     logging.info(f"[OrderExecutor] Calling transaction verification for order: {order['order_id']}")
+
     channel = grpc.insecure_channel("transaction_verification:50052")
     stub = transaction_verification_grpc.TransactionVerificationServiceStub(channel)
-    init_req = transaction_verification.TransactionInitRequest(**order["payload"], order_id=order["order_id"])
+
+    # 1) InitializeOrder
+    init_req = transaction_verification.TransactionInitRequest(
+        **order["payload"],    # e.g. billingCity, billingCountry, creditCardNumber, expiryDate, etc.
+        order_id=order["order_id"]
+    )
     stub.InitializeOrder(init_req)
-    verify_req = transaction_verification.TransactionRequest(order_id=order["order_id"])
-    response = stub.VerifyTransaction(verify_req)
-    logging.info(f"[OrderExecutor] Transaction Valid: {response.isValid}, Reason: {response.reason}")
+    logging.info(f"[OrderExecutor] Initialized order {order['order_id']} with data: {order['payload']}")
+
+    # 2) CheckBilling
+    billing_req = transaction_verification.BillingCheckRequest(
+        order_id=order["order_id"],
+        billingCity=order["payload"].get("billingCity", ""),
+        billingCountry=order["payload"].get("billingCountry", ""),
+        # If you have billingState, billingZip, etc., pass them here:
+        # billingState=order["payload"].get("billingState", ""),
+        # billingZip=order["payload"].get("billingZip", ""),
+    )
+    billing_resp = stub.CheckBilling(billing_req)
+    logging.info(f"[OrderExecutor] Billing Result: isValid={billing_resp.isValid}, reason={billing_resp.reason}")
+    if not billing_resp.isValid:
+        logging.error(f"[OrderExecutor] Billing check failed: {billing_resp.reason}")
+        return  # or raise an exception / handle error
+
+    # 3) CheckCard
+    card_req = transaction_verification.CardCheckRequest(
+        order_id=order["order_id"],
+        creditCardNumber=order["payload"].get("creditCardNumber", ""),
+        expiryDate=order["payload"].get("expiryDate", "")
+    )
+    card_resp = stub.CheckCard(card_req)
+    logging.info(f"[OrderExecutor] Card Result: isValid={card_resp.isValid}, reason={card_resp.reason}")
+    if not card_resp.isValid:
+        logging.error(f"[OrderExecutor] Card check failed: {card_resp.reason}")
+        return  # or handle error
+
+    # If we reach here => both checks passed
+    logging.info(f"[OrderExecutor] Transaction checks passed for order {order['order_id']}")
 
 def dispatch_order(order):
     if not order.get("type") or not order.get("payload"):
@@ -126,6 +167,7 @@ def dispatch_order(order):
     elif order["type"] == "suggestion":
         call_suggestions(order)
     elif order["type"] == "verify_transaction":
+        # call the updated splitted approach
         call_transaction_verification(order)
     else:
         logging.warning(f"[{NODE_ID}] Unknown order type: {order['type']}")

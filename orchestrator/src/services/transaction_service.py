@@ -19,7 +19,6 @@ import transaction_verification_pb2_grpc as transaction_verification_grpc
 
 from bookstore_models import CreditCardInfo, BillingInfo, ServiceResult
 
-
 class TransactionService:
     """Client for the transaction verification service."""
 
@@ -30,7 +29,10 @@ class TransactionService:
     def initialize_order(
         self, order_id: str, credit_card: CreditCardInfo, billing: BillingInfo
     ) -> bool:
-        """Initialize a transaction order."""
+        """
+        Existing method: calls InitializeOrder(...) on the microservice
+        to store credit card & billing info before final checks.
+        """
         try:
             stub = self.grpc_factory.get_stub(
                 "transaction_verification",
@@ -70,10 +72,103 @@ class TransactionService:
             )
             return False
 
+    def check_card(
+        self, order_id: str, credit_card: CreditCardInfo
+    ) -> ServiceResult:
+        """
+        NEW method that calls CheckCard(...) on the microservice, 
+        performing length, Luhn, expiry checks only.
+        """
+        result = ServiceResult()
+        try:
+            stub = self.grpc_factory.get_stub(
+                "transaction_verification",
+                transaction_verification_grpc.TransactionVerificationServiceStub,
+                secure=False,
+            )
+            current_clock = self.event_tracker.get_clock(
+                order_id, "orchestrator",
+            )
+            request = transaction_verification.CardCheckRequest(
+                order_id=order_id,
+                creditCardNumber=credit_card.number,
+                expiryDate=credit_card.expiry_date,
+                vectorClock=current_clock,
+            )
+            response = stub.CheckCard(request)
+
+            # record vector clock update
+            self.event_tracker.record_event(
+                order_id=order_id,
+                service="orchestrator",
+                event_name="transaction_service.CheckCard",
+                received_clock=response.vectorClock,
+            )
+
+            response_dict = MessageToDict(response)
+            result.data = response_dict
+            result.success = response_dict.get("isValid", False)
+            if not result.success:
+                result.error = response_dict.get("reason", "Unknown card check error")
+            return result
+
+        except grpc.RpcError as e:
+            print(f"gRPC error (check_card): {e.code()}: {e.details()}")
+            result.error = f"check_card error: {e.details()}"
+            return result
+
+    def check_billing(
+        self, order_id: str, billing: BillingInfo
+    ) -> ServiceResult:
+        """
+        NEW method that calls CheckBilling(...) on the microservice,
+        verifying city/country (and optionally other fields).
+        """
+        result = ServiceResult()
+        try:
+            stub = self.grpc_factory.get_stub(
+                "transaction_verification",
+                transaction_verification_grpc.TransactionVerificationServiceStub,
+                secure=False,
+            )
+            current_clock = self.event_tracker.get_clock(
+                order_id, "orchestrator",
+            )
+            request = transaction_verification.BillingCheckRequest(
+                order_id=order_id,
+                billingCity=billing.city,
+                billingCountry=billing.country,
+                vectorClock=current_clock,
+            )
+            response = stub.CheckBilling(request)
+
+            # record vector clock
+            self.event_tracker.record_event(
+                order_id=order_id,
+                service="orchestrator",
+                event_name="transaction_service.CheckBilling",
+                received_clock=response.vectorClock,
+            )
+
+            response_dict = MessageToDict(response)
+            result.data = response_dict
+            result.success = response_dict.get("isValid", False)
+            if not result.success:
+                result.error = response_dict.get("reason", "Unknown billing check error")
+            return result
+
+        except grpc.RpcError as e:
+            print(f"gRPC error (check_billing): {e.code()}: {e.details()}")
+            result.error = f"check_billing error: {e.details()}"
+            return result
+
     def verify_transaction(
         self, order_id: str, credit_card: CreditCardInfo, billing: BillingInfo
     ) -> ServiceResult:
-        """Verify a transaction."""
+        """
+        Existing single-step approach, calling VerifyTransaction(...) 
+        that checks both card + billing in one go.
+        """
         result = ServiceResult()
         try:
             stub = self.grpc_factory.get_stub(
@@ -101,15 +196,17 @@ class TransactionService:
             self.event_tracker.record_event(
                 order_id=order_id,
                 service="orchestrator",
-                event_name="transaction_service.InitializeOrder",
+                event_name="transaction_service.VerifyTransaction",
                 received_clock=response.vectorClock,
             )
 
-            result.data = MessageToDict(response)
-            result.success = result.data.get("isValid", False)
+            response_dict = MessageToDict(response)
+            result.data = response_dict
+            result.success = response_dict.get("isValid", False)
             if not result.success:
-                result.error = result.data.get("reason", "Unknown transaction error")
+                result.error = response_dict.get("reason", "Unknown transaction error")
             return result
+
         except grpc.RpcError as e:
             print(f"gRPC error (verify_transaction): {e.code()}: {e.details()}")
             result.error = f"Transaction service error: {e.details()}"
@@ -119,14 +216,7 @@ class TransactionService:
         self, order_id: str, final_vector_clock: Dict[str, int]
     ) -> bool:
         """
-        Clear the order data if the local vector clock is <= final_vector_clock.
-
-        Args:
-            order_id: The order ID to clear
-            final_vector_clock: The final vector clock from the orchestrator
-
-        Returns:
-            bool: True if cleared successfully, False otherwise
+        Clear the order data (calls ClearOrder(...) on the microservice).
         """
         try:
             stub = self.grpc_factory.get_stub(
@@ -135,14 +225,12 @@ class TransactionService:
                 secure=False,
             )
 
-            # Call the ClearOrder method on the gRPC service
             response = stub.ClearOrder(
                 transaction_verification.ClearOrderRequest(
                     order_id=order_id, vectorClock=final_vector_clock
                 )
             )
 
-            # Verify the response
             if not response or not response.success:
                 error_msg = response.error if response else "Unknown error"
                 print(f"Failed to clear order data: {error_msg}")

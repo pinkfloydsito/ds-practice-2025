@@ -4,20 +4,33 @@ package transaction_verification;
 
 // The service definition
 service TransactionVerificationService {
-  rpc InitializeOrder (TransactionInitRequest) returns (TransactionInitResponse);
-  rpc VerifyTransaction (TransactionRequest) returns (TransactionResponse);
+ 
+  rpc InitializeOrder(TransactionInitRequest) returns (TransactionInitResponse);
+
+  //  Splitting final verification into two calls
+  rpc CheckCard(CardCheckRequest) returns (TransactionResponse);
+  rpc CheckBilling(BillingCheckRequest) returns (TransactionResponse);
+
+  //  combined method
+  rpc VerifyTransaction(TransactionRequest) returns (TransactionResponse);
+
+  
   rpc ClearOrder(ClearOrderRequest) returns (ClearOrderResponse);
 }
 
+// INITIALIZATION PHASE
 message TransactionInitRequest {
   string order_id = 1;
   string creditCardNumber = 2;
-  string expiryDate = 3; // same format "MM/YY" or "MM/YYYY"
+  string expiryDate = 3; // "MM/YY" or "MM/YYYY"
+
+  // Already present billing fields
   string billingStreet = 4;
   string billingCity = 5;
   string billingState = 6;
   string billingZip = 7;
   string billingCountry = 8;
+
   map<string, int32> vectorClock = 9;
 }
 
@@ -26,11 +39,31 @@ message TransactionInitResponse {
   map<string, int32> vectorClock = 2; 
 }
 
-// Request message
+// SPLIT CHECKS
+// CardCheckRequest => length, Luhn, expiry
+message CardCheckRequest {
+  string order_id = 1;
+  string creditCardNumber = 2;
+  string expiryDate = 3;
+  map<string, int32> vectorClock = 4;
+}
+
+// BillingCheckRequest => city, state, zip, country completeness
+message BillingCheckRequest {
+  string order_id = 1;
+  string billingCity = 2;
+  string billingState = 3;
+  string billingZip = 4;
+  string billingCountry = 5;
+  map<string, int32> vectorClock = 6;
+}
+
+// FINAL/LEGACY
 message TransactionRequest {
   string creditCardNumber = 1;
-  string expiryDate = 2; // format: "MM/YY" or "MM/YYYY"
+  string expiryDate = 2; // "MM/YY" or "MM/YYYY"
   string order_id = 3;
+
   string billingCity = 4;
   string billingState = 5;
   string billingZip = 6;
@@ -38,20 +71,21 @@ message TransactionRequest {
   map<string, int32> vectorClock = 8; 
 }
 
-// Response message
+// RESPONSE
 message TransactionResponse {
   bool isValid = 1;
   string reason = 2; 
   map<string, int32> vectorClock = 3; 
 }
 
+// CLEAR ORDER
 message ClearOrderRequest {
-    string order_id = 1;
-    map<string, int32> vectorClock = 2;
+  string order_id = 1;
+  map<string, int32> vectorClock = 2;
 }
 
 message ClearOrderResponse {
-    bool success = 1;
-    string error = 2;
-    map<string, int32> vectorClock = 3;
+  bool success = 1;
+  string error = 2;
+  map<string, int32> vectorClock = 3;
 }
