@@ -49,6 +49,48 @@ class TransactionInitResponse(_message.Message):
     vectorClock: _containers.ScalarMap[str, int]
     def __init__(self, success: bool = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
 
+class CardCheckRequest(_message.Message):
+    __slots__ = ("order_id", "creditCardNumber", "expiryDate", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    CREDITCARDNUMBER_FIELD_NUMBER: _ClassVar[int]
+    EXPIRYDATE_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    creditCardNumber: str
+    expiryDate: str
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, order_id: _Optional[str] = ..., creditCardNumber: _Optional[str] = ..., expiryDate: _Optional[str] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
+
+class BillingCheckRequest(_message.Message):
+    __slots__ = ("order_id", "billingCity", "billingState", "billingZip", "billingCountry", "vectorClock")
+    class VectorClockEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: int
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[int] = ...) -> None: ...
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCITY_FIELD_NUMBER: _ClassVar[int]
+    BILLINGSTATE_FIELD_NUMBER: _ClassVar[int]
+    BILLINGZIP_FIELD_NUMBER: _ClassVar[int]
+    BILLINGCOUNTRY_FIELD_NUMBER: _ClassVar[int]
+    VECTORCLOCK_FIELD_NUMBER: _ClassVar[int]
+    order_id: str
+    billingCity: str
+    billingState: str
+    billingZip: str
+    billingCountry: str
+    vectorClock: _containers.ScalarMap[str, int]
+    def __init__(self, order_id: _Optional[str] = ..., billingCity: _Optional[str] = ..., billingState: _Optional[str] = ..., billingZip: _Optional[str] = ..., billingCountry: _Optional[str] = ..., vectorClock: _Optional[_Mapping[str, int]] = ...) -> None: ...
+
 class TransactionRequest(_message.Message):
     __slots__ = ("creditCardNumber", "expiryDate", "order_id", "billingCity", "billingState", "billingZip", "billingCountry", "vectorClock")
     class VectorClockEntry(_message.Message):

@@ -40,6 +40,16 @@ class TransactionVerificationServiceStub(object):
                 request_serializer=transaction__verification__pb2.TransactionInitRequest.SerializeToString,
                 response_deserializer=transaction__verification__pb2.TransactionInitResponse.FromString,
                 _registered_method=True)
+        self.CheckCard = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/CheckCard',
+                request_serializer=transaction__verification__pb2.CardCheckRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.TransactionResponse.FromString,
+                _registered_method=True)
+        self.CheckBilling = channel.unary_unary(
+                '/transaction_verification.TransactionVerificationService/CheckBilling',
+                request_serializer=transaction__verification__pb2.BillingCheckRequest.SerializeToString,
+                response_deserializer=transaction__verification__pb2.TransactionResponse.FromString,
+                _registered_method=True)
         self.VerifyTransaction = channel.unary_unary(
                 '/transaction_verification.TransactionVerificationService/VerifyTransaction',
                 request_serializer=transaction__verification__pb2.TransactionRequest.SerializeToString,
@@ -62,8 +72,22 @@ class TransactionVerificationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def VerifyTransaction(self, request, context):
+    def CheckCard(self, request, context):
+        """Splitting final verification into two calls
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckBilling(self, request, context):
         """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VerifyTransaction(self, request, context):
+        """combined method
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -81,6 +105,16 @@ def add_TransactionVerificationServiceServicer_to_server(servicer, server):
                     servicer.InitializeOrder,
                     request_deserializer=transaction__verification__pb2.TransactionInitRequest.FromString,
                     response_serializer=transaction__verification__pb2.TransactionInitResponse.SerializeToString,
+            ),
+            'CheckCard': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckCard,
+                    request_deserializer=transaction__verification__pb2.CardCheckRequest.FromString,
+                    response_serializer=transaction__verification__pb2.TransactionResponse.SerializeToString,
+            ),
+            'CheckBilling': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckBilling,
+                    request_deserializer=transaction__verification__pb2.BillingCheckRequest.FromString,
+                    response_serializer=transaction__verification__pb2.TransactionResponse.SerializeToString,
             ),
             'VerifyTransaction': grpc.unary_unary_rpc_method_handler(
                     servicer.VerifyTransaction,
@@ -121,6 +155,60 @@ class TransactionVerificationService(object):
             '/transaction_verification.TransactionVerificationService/InitializeOrder',
             transaction__verification__pb2.TransactionInitRequest.SerializeToString,
             transaction__verification__pb2.TransactionInitResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckCard(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/CheckCard',
+            transaction__verification__pb2.CardCheckRequest.SerializeToString,
+            transaction__verification__pb2.TransactionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckBilling(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/transaction_verification.TransactionVerificationService/CheckBilling',
+            transaction__verification__pb2.BillingCheckRequest.SerializeToString,
+            transaction__verification__pb2.TransactionResponse.FromString,
             options,
             channel_credentials,
             insecure,

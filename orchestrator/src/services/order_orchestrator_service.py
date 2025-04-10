@@ -36,8 +36,10 @@ class OrderOrchestratorService:
         credit_card: CreditCardInfo,
         billing: BillingInfo,
     ) -> bool:
-        """Initialize all required services before final processing."""
-
+        """
+        Initialize all required services before final processing.
+        This calls InitializeOrder on transaction, fraud, and suggestions.
+        """
         # first initialize the vector clock
         self.order_event_tracker.initialize_order(order.order_id)
         self.order_event_tracker.record_event(
@@ -47,9 +49,7 @@ class OrderOrchestratorService:
         tx_init_ok = self.transaction_service.initialize_order(
             order.order_id, credit_card, billing
         )
-
         fraud_init_ok = self.fraud_service.initialize_order(order, user, billing)
-
         sugg_init_ok = self.suggestions_service.initialize_order(
             order.order_id, order.book_tokens, limit=3
         )
@@ -128,169 +128,184 @@ class OrderOrchestratorService:
         credit_card: CreditCardInfo,
         billing: BillingInfo,
     ) -> Tuple[bool, Dict[str, Any]]:
-        """Process the order concurrently across all microservices."""
-        # Results containers
-        results = {"verification": None, "fraud": None, "suggestions": None}
+        """
+        Process the order by splitting the transaction verification into:
+          - billing check first,
+          - then card check,
+          - plus fraud in parallel,
+          - suggestions after fraud & card are done if not terminated.
+        """
+
+        results = {"billing": None, "card": None, "fraud": None, "suggestions": None}
         errors = []
 
-        # event signaling
-        # event_completed = {
-        #     "fraud": threading.Event(),
-        #     "verify": threading.Event(),
-        # }
-
+        # concurrency signals
+        billing_flag = threading.Event()
+        card_flag = threading.Event()
         fraud_flag = threading.Event()
-        verify_flag = threading.Event()
         early_termination = threading.Event()
         results_lock = threading.Lock()
 
-        # workers
-        def verification_worker():
+        # -------------------- WORKERS --------------------
+
+        def billing_worker():
+            """Check if billing address is complete, then set billing_flag."""
             try:
-                print(
-                    f"[Orchestrator] Starting final VerifyTransaction for card: {credit_card.number}"
-                )
-                verification_result = self.transaction_service.verify_transaction(
-                    order.order_id, credit_card, billing
-                )
+                print("[Orchestrator] Checking billing info...")
+                billing_result = self.transaction_service.check_billing(order.order_id, billing)
 
                 with results_lock:
-                    results["verification"] = verification_result
+                    results["billing"] = billing_result
 
-                    print(
-                        f"[Orchestrator] Verification final result: {results['verification'].success}"
-                    )
-
-                    if not verification_result.success:
-                        error_msg = (
-                            verification_result.error
-                            if verification_result
-                            else "Transaction verification failed"
-                        )
-                        errors.append(error_msg)
-                        early_termination.set()
-                        print(
-                            "[Orchestrator] Transaction verification failed - signaling early termination"
-                        )
+                if not billing_result.success:
+                    err = billing_result.error or "Billing check failed"
+                    errors.append(err)
+                    early_termination.set()
+                    print(f"[Orchestrator] Billing check failed => {err}")
+                else:
+                    print("[Orchestrator] Billing check passed.")
             except Exception as e:
-                errors.append(f"Transaction verification error: {str(e)}")
-
+                errors.append(f"Billing worker error: {str(e)}")
+                early_termination.set()
             finally:
-                # signal
-                verify_flag.set()
-                print("[Orchestrator] Verification worker completed")
+                billing_flag.set()
+                print("[Orchestrator] Billing worker completed.")
+
+        def card_worker():
+            """
+            Waits for billing to finish. If not early-terminated, check card length/Luhn/expiry.
+            """
+            try:
+                billing_flag.wait()
+                if early_termination.is_set():
+                    return  # skip if billing or something else failed
+
+                print("[Orchestrator] Checking card info...")
+                card_result = self.transaction_service.check_card(order.order_id, credit_card)
+
+                with results_lock:
+                    results["card"] = card_result
+
+                if not card_result.success:
+                    err = card_result.error or "Card check failed"
+                    errors.append(err)
+                    early_termination.set()
+                    print(f"[Orchestrator] Card check failed => {err}")
+                else:
+                    print("[Orchestrator] Card check passed.")
+            except Exception as e:
+                errors.append(f"Card worker error: {str(e)}")
+                early_termination.set()
+            finally:
+                card_flag.set()
+                print("[Orchestrator] Card worker completed.")
 
         def fraud_worker():
+            """
+            Fraud check runs in parallel. If it fails, we set early_termination.
+            """
             try:
-                print("[Orchestrator] Starting final fraud_detection analysis")
-                results["fraud"] = self.fraud_service.check_fraud(order, user, billing)
-                print(
-                    f"[Orchestrator] Fraud detection final result: {results['fraud'].success}"
-                )
-            except Exception as e:
-                errors.append(f"Fraud detection error: {str(e)}")
+                print("[Orchestrator] Checking fraud info...")
+                fraud_result = self.fraud_service.check_fraud(order, user, billing)
 
+                with results_lock:
+                    results["fraud"] = fraud_result
+
+                if not fraud_result.success:
+                    err = fraud_result.error or "Fraud check failed"
+                    errors.append(err)
+                    early_termination.set()
+                    print(f"[Orchestrator] Fraud detection failed => {err}")
+                else:
+                    print("[Orchestrator] Fraud detection passed.")
+            except Exception as e:
+                errors.append(f"Fraud worker error: {str(e)}")
+                early_termination.set()
             finally:
-                # signal
                 fraud_flag.set()
-                print("[Orchestrator] Fraud worker completed")
+                print("[Orchestrator] Fraud worker completed.")
 
         def suggestions_worker():
+            """
+            Wait for both card & fraud checks. If no early termination, get suggestions.
+            """
             try:
                 fraud_flag.wait()
-                verify_flag.wait()
-
+                card_flag.wait()
                 if early_termination.is_set():
                     return
 
-                print("[Orchestrator] Starting final suggestions retrieval")
-                results["suggestions"] = self.suggestions_service.get_suggestions(
-                    order.order_id
-                )
-                count = (
-                    len(results["suggestions"].data)
-                    if results["suggestions"].data
-                    else 0
-                )
-                print(f"[Orchestrator] Retrieved {count} suggestions")
-            except Exception as e:
-                errors.append(f"Suggestions error: {str(e)}")
+                print("[Orchestrator] Getting suggestions...")
+                sugg_result = self.suggestions_service.get_suggestions(order.order_id)
 
+                with results_lock:
+                    results["suggestions"] = sugg_result
+
+                cnt = len(sugg_result.data) if sugg_result.data else 0
+                print(f"[Orchestrator] Retrieved {cnt} suggestions.")
+            except Exception as e:
+                errors.append(f"Suggestions worker error: {str(e)}")
+
+        # -------------------- RUN CONCURRENCY --------------------
         futures = {}
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures["verification"] = executor.submit(verification_worker)
+            futures["billing"] = executor.submit(billing_worker)
+            futures["card"] = executor.submit(card_worker)
             futures["fraud"] = executor.submit(fraud_worker)
             futures["suggestions"] = executor.submit(suggestions_worker)
 
-            # check for early termination
             def check_early_termination():
-                while not all(future.done() for future in futures.values()):
+                while not all(f.done() for f in futures.values()):
                     if early_termination.is_set():
-                        # cancel pending futures
-                        for name, future in futures.items():
-                            if not future.done():
-                                print(
-                                    f"[Orchestrator] Canceling {name} worker due to early termination"
-                                )
-                                future.cancel()
+                        # Cancel any not-done tasks
+                        for name, fut in futures.items():
+                            if not fut.done():
+                                print(f"[Orchestrator] Canceling {name} due to early termination")
+                                fut.cancel()
                         break
-                    # timeout to avoid busy waiting
+                    # short sleep
                     early_termination.wait(0.05)
 
-            # Start the early termination checker
-            termination_checker = threading.Thread(target=check_early_termination)
-            termination_checker.daemon = True
+            termination_checker = threading.Thread(target=check_early_termination, daemon=True)
             termination_checker.start()
 
-            # Wait for all futures to complete (or be canceled)
             for _ in as_completed(list(futures.values())):
                 pass
-
-            # Wait for the termination checker to finish
             termination_checker.join(timeout=1.0)
 
-        # worker threads completed. Now we try to clear the order data
+        # After concurrency, try clearing order data
         broadcast_success, broadcast_errors = self.broadcast_clear_order(order.order_id)
-
         if not broadcast_success:
-            print(
-                f"Failed to clear some order data: {broadcast_errors}"
-            )  # not hard-fail
+            print(f"[Orchestrator] Failed to clear some order data: {broadcast_errors}")
 
-        # errors (?)
+        # If any errors or early termination
         if errors:
             return False, {
                 "error": {"code": "ORDER_REJECTED", "message": " / ".join(errors)}
             }
 
-        # validation of results
+        # Evaluate final results
+        # - billing
+        if not results["billing"] or not results["billing"].success:
+            err = results["billing"].error if results["billing"] else "Billing check not completed"
+            return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
+
+        # - card
+        if not results["card"] or not results["card"].success:
+            err = results["card"].error if results["card"] else "Card check not completed"
+            return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
+
+        # - fraud
         if not results["fraud"] or not results["fraud"].success:
-            error_msg = (
-                results["fraud"].error
-                if results["fraud"]
-                else "Fraud detection not completed"
-            )
-            return False, {"error": {"code": "ORDER_REJECTED", "message": error_msg}}
+            err = results["fraud"].error if results["fraud"] else "Fraud check not completed"
+            return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
 
-        if not results["verification"] or not results["verification"].success:
-            error_msg = (
-                results["verification"].error
-                if results["verification"]
-                else "Transaction verification failed"
-            )
-            return False, {"error": {"code": "ORDER_REJECTED", "message": error_msg}}
-
-        print(
-            f"[Orchestrator] Order {order.order_id} approved. Final vector clock. {self.order_event_tracker.get_clock(order.order_id, 'orchestrator')}"
-        )
-
-        # XXX: enqueue the message to send to the order_executor
-
-        # Success response
+        # If we get here => Approved
+        print(f"[Orchestrator] Order {order.order_id} APPROVED.")
         return True, {
             "orderId": order.order_id,
             "status": "Order Approved",
             "suggestedBooks": results["suggestions"].data
-            if results["suggestions"]
+            if results["suggestions"] and results["suggestions"].data
             else [],
         }
