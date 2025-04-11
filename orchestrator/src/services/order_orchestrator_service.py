@@ -43,7 +43,7 @@ class OrderOrchestratorService:
         # first initialize the vector clock
         self.order_event_tracker.initialize_order(order.order_id)
         self.order_event_tracker.record_event(
-            order.order_id, "orchestrator", "initialize_order"
+            order.order_id, "orchestrator", "dummy - initializer"
         )
 
         tx_init_ok = self.transaction_service.initialize_order(
@@ -152,7 +152,9 @@ class OrderOrchestratorService:
             """Check if billing address is complete, then set billing_flag."""
             try:
                 print("[Orchestrator] Checking billing info...")
-                billing_result = self.transaction_service.check_billing(order.order_id, billing)
+                billing_result = self.transaction_service.check_billing(
+                    order.order_id, billing
+                )
 
                 with results_lock:
                     results["billing"] = billing_result
@@ -181,7 +183,9 @@ class OrderOrchestratorService:
                     return  # skip if billing or something else failed
 
                 print("[Orchestrator] Checking card info...")
-                card_result = self.transaction_service.check_card(order.order_id, credit_card)
+                card_result = self.transaction_service.check_card(
+                    order.order_id, credit_card
+                )
 
                 with results_lock:
                     results["card"] = card_result
@@ -260,13 +264,17 @@ class OrderOrchestratorService:
                         # Cancel any not-done tasks
                         for name, fut in futures.items():
                             if not fut.done():
-                                print(f"[Orchestrator] Canceling {name} due to early termination")
+                                print(
+                                    f"[Orchestrator] Canceling {name} due to early termination"
+                                )
                                 fut.cancel()
                         break
                     # short sleep
                     early_termination.wait(0.05)
 
-            termination_checker = threading.Thread(target=check_early_termination, daemon=True)
+            termination_checker = threading.Thread(
+                target=check_early_termination, daemon=True
+            )
             termination_checker.start()
 
             for _ in as_completed(list(futures.values())):
@@ -287,17 +295,27 @@ class OrderOrchestratorService:
         # Evaluate final results
         # - billing
         if not results["billing"] or not results["billing"].success:
-            err = results["billing"].error if results["billing"] else "Billing check not completed"
+            err = (
+                results["billing"].error
+                if results["billing"]
+                else "Billing check not completed"
+            )
             return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
 
         # - card
         if not results["card"] or not results["card"].success:
-            err = results["card"].error if results["card"] else "Card check not completed"
+            err = (
+                results["card"].error if results["card"] else "Card check not completed"
+            )
             return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
 
         # - fraud
         if not results["fraud"] or not results["fraud"].success:
-            err = results["fraud"].error if results["fraud"] else "Fraud check not completed"
+            err = (
+                results["fraud"].error
+                if results["fraud"]
+                else "Fraud check not completed"
+            )
             return False, {"error": {"code": "ORDER_REJECTED", "message": err}}
 
         # If we get here => Approved

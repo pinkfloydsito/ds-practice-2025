@@ -38,7 +38,7 @@
 
 # 📜 Project Documentation
 
-This document explains the architecture and inner workings of the order-processing system involving multiple microservices, Redis-based leader election, and vector clocks.
+This document explains the architecture and inner workings of the order-processing system involving multiple microservices, Redis-based leader election, the system model and vector clocks.
 
 ---
 
@@ -104,28 +104,97 @@ If it crashes, key expires → New election happens
 ### Scenario: Order is placed and processed through services
 
 ```
-Processes: E (Executor), F (Fraud), T (Transaction), S (Suggestion)
-
-[Event 1] Order placed by user
-E: [1,0,0,0]
-
-[Event 2] Executor sends to Fraud
-E: [2,0,0,0] → F: [2,1,0,0]
-
-[Event 3] Executor sends to Transaction
-E: [3,1,0,0] → T: [3,1,1,0]
-
-[Event 4] Executor sends to Suggestion
-E: [4,1,1,0] → S: [4,1,1,1]
-
-[Event 5] Executor processes responses
-E: [5,1,1,1]
+![Vector Clock Diagram](./images/vector-clock.final.png)
 ```
 
 Each number represents the logical clock of that process. Vector clock updates ensure causality and ordering.
 
 ---
+## System Model
 
+The system model for the **Bookstore** is a distributed microservices architecture designed to manage the order checkout process.
+
+---
+
+### 🧩 Components
+
+- **Order Orchestrator**: Coordinates workflows across services, manages concurrency, and handles error propagation.
+- **Transaction Service**: Validates billing information and credit card details.
+- **Fraud Service**: Performs fraud detection checks on orders.
+- **Suggestions Service**: Generates book recommendations post-validation.
+- **Order Event Tracker**: Maintains a vector clock for event ordering and consistency across distributed services.
+- **Order Executor**: Queues and dequeues orders, ensuring that the leader executor handles the order processing.
+
+---
+
+### 🔀 Concurrency Model
+
+#### Parallel Execution
+- Utilizes `ThreadPoolExecutor` to run billing, card, and fraud checks concurrently.
+
+#### Dependency Management
+- **Billing Check**: Runs first.
+- **Card Check**: Depends on billing; starts only after billing completes.
+- **Fraud Check**: Runs in parallel with billing and card checks.
+- **Suggestions**: Fetched only after fraud and card checks both succeed.
+
+#### Early Termination
+- Errors in any check (e.g., invalid billing) trigger cancellation of non-essential tasks via `early_termination` events.
+
+---
+
+### 📈 Data Flow
+
+#### Initialization
+- Order, user, credit card, and billing data are propagated to all services via `initialize_services`.
+
+#### Processing
+- Each service receives specific parameters (e.g., `check_card` receives credit card details).
+
+#### Cleanup
+- `broadcast_clear_order` ensures all services delete temporary order data using a final vector clock.
+
+---
+
+### ⚠️ Error Handling
+
+- Errors in any service (e.g., failed fraud check) are aggregated and propagated to the orchestrator.
+- Failed checks trigger immediate termination of dependent tasks using a flag.
+  - Specially ensuring that **suggestions service** calls are skipped if fraud check fails.
+
+---
+
+### ⏱️ Vector Clocks
+
+- Track event ordering across services to maintain consistency.
+- Final clock state is broadcast during cleanup to ensure all services agree on event timelines.
+
+---
+
+### 🔗 Inter-Service Communication
+
+- Uses **gRPC** for cross-service calls (via `grpc_factory` initialization).
+- Services are **decoupled**; orchestrator and the order executor act as the central coordinator at the moment (in the future execution will be fully done by the order executor).
+
+---
+
+### 📦 Order Processing Workflow
+
+1. **Initialization**: Services are set up with order data.
+2. **Concurrent Checks**:
+   - Billing validation → Credit card check (sequential)
+   - Fraud detection (parallel to billing/card)
+3. **Post-Validation**:
+   - Suggestions fetched only if all prior checks succeed.
+4. **Cleanup**:
+   - Data is cleared across services atomically.
+
+---
+
+## 🧵 Threading & Synchronization
+
+- Uses `threading.Event` and `as_completed` to manage task dependencies.
+- Global `results` dictionary with thread locks ensures safe concurrent data access.
 ## 📌 Notes
 - Vector clocks and leader election are simplified representations based on lecture models.
 - gRPC ensures reliable structured communication.
