@@ -1,0 +1,90 @@
+graph TD
+    %% Main Process
+    subgraph "Order Processing Flow"
+        direction LR
+        Start[Client Order Request] --> Initialize[Initialize Order]
+        Initialize --> Validation{Validation Phase}
+        Validation --> |All Checks Pass| Success[Order Approved]
+        Validation --> |Any Check Fails| Failure[Order Rejected]
+        Success --> RAFT[Submit to RAFT Executor]
+        Failure --> Cleanup[Cleanup Order Data]
+        Success --> Cleanup
+    end
+    
+    %% Detailed Validation Flow
+    subgraph "Validation Phase (Concurrent)"
+        direction TB
+        BillingCheck[Billing Verification]
+        CardCheck[Card Verification]
+        FraudCheck[Fraud Detection]
+        SuggestionsGen[Suggestions Generation]
+        
+        BillingCheck --> |Success| CardCheck
+        BillingCheck --> |Failure| EarlyStop[Early Termination]
+        
+        CardCheck --> |Failure| EarlyStop
+        FraudCheck --> |Failure| EarlyStop
+        
+        CardCheck --> |Success AND FraudCheck Success| SuggestionsGen
+        FraudCheck --> |Success| SuggestionsStatus[Await Card Check]
+    end
+    
+    %% Failure Handling Mechanisms
+    subgraph "Failure Handling Mechanisms"
+        direction TB
+        ThreadCancel[Thread Cancellation]
+        ErrorCollection[Error Collection]
+        ErrorPropagation[Error Propagation]
+        VectorConsistency[Vector Clock Consistency]
+        
+        ErrorCollection --> ErrorPropagation
+        ThreadCancel --> ErrorCollection
+        EarlyStop --> ThreadCancel
+    end
+    
+    %% RAFT Failure Handling
+    subgraph "RAFT Consensus Failure Handling"
+        LeaderFailure[Leader Node Failure]
+        ElectionTimeout[Election Timeout]
+        NewLeaderElection[New Leader Election]
+        StateRecovery[State Recovery]
+        LogReplication[Log Replication]
+        
+        LeaderFailure --> ElectionTimeout
+        ElectionTimeout --> NewLeaderElection
+        NewLeaderElection --> StateRecovery
+        StateRecovery --> LogReplication
+    end
+    
+    %% Service Failure Handling
+    subgraph "Service Failure Model"
+        ServiceDown[Service Unavailable]
+        GRPCError[gRPC Connection Error]
+        CircuitBreaker[Circuit Breaker Pattern]
+        RetryMechanism[Retry Mechanism]
+        Fallback[Fallback Response]
+        
+        ServiceDown --> GRPCError
+        GRPCError --> CircuitBreaker
+        CircuitBreaker --> RetryMechanism
+        RetryMechanism --> |Max Retries Exceeded| Fallback
+    end
+    
+    %% Connections
+    Validation --> ThreadCancel
+    RAFT --> LeaderFailure
+    GRPCError --> EarlyStop
+    LogReplication --> Success
+    
+    %% Styling
+    classDef process fill:#d5e8d4,stroke:#82b366;
+    classDef decision fill:#fff2cc,stroke:#d6b656;
+    classDef failure fill:#f8cecc,stroke:#b85450;
+    classDef success fill:#dae8fc,stroke:#6c8ebf;
+    classDef raft fill:#e1d5e7,stroke:#9673a6;
+    
+    class Start,Initialize,Cleanup process;
+    class Validation,BillingCheck,CardCheck,FraudCheck,SuggestionsGen decision;
+    class Failure,EarlyStop,ThreadCancel,ErrorCollection,ErrorPropagation,ServiceDown,GRPCError failure;
+    class Success,SuggestionsStatus success;
+    class RAFT,LeaderFailure,ElectionTimeout,NewLeaderElection,StateRecovery,LogReplication raft;
