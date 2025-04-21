@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package order_executor;
+
+// job submitting and leader discovery
+service ClientService {
+  // submit a job to the registered node (desired is the leader)
+  rpc SubmitJob(JobRequest) returns (JobResponse);
+  
+  // get current leader id
+  rpc GetLeader(Empty) returns (LeaderResponse);
+}
+
+// Internal Raft consensus service
+service Raft {
+  // Request vote from a peer node during election
+  rpc RequestVote(RequestVoteArgs) returns (RequestVoteResult);
+  
+  // Send heartbeats and replicate log entries
+  rpc AppendEntries(AppendEntriesArgs) returns (AppendEntriesResult);
+  
+  // Also expose client-facing endpoints for simplicity
+  rpc SubmitJob(JobRequest) returns (JobResponse);
+  rpc GetLeader(Empty) returns (LeaderResponse);
+}
+
+// Job request with optional priority
+message JobRequest {
+  string job_id = 1;
+  string payload = 2;   // JSON-encoded order data
+  int32 priority = 3;   // Optional priority (will be calculated if not provided)
+}
+
+// Job response with success status and leader redirection
+message JobResponse {
+  bool success = 1;
+  string leader_id = 2;  // If not leader, contains leader ID for redirection
+}
+
+// Response containing the current leader ID
+message LeaderResponse {
+  string leader_id = 1;
+}
+
+// Empty message for requests that don't need parameters
+message Empty {}
+
+// RequestVote RPC arguments
+message RequestVoteArgs {
+  int32 term = 1;
+  string candidate_id = 2;
+  int32 last_log_index = 3;
+  int32 last_log_term = 4;
+}
+
+// RequestVote RPC results
+message RequestVoteResult {
+  int32 term = 1;
+  bool vote_granted = 2;
+}
+
+// AppendEntries RPC arguments
+message AppendEntriesArgs {
+  int32 term = 1;
+  string leader_id = 2;
+  int32 prev_log_index = 3;
+  int32 prev_log_term = 4;
+  repeated bytes entries = 5;  // serialize entries
+  int32 leader_commit = 6;
+}
+
+// AppendEntries RPC results
+message AppendEntriesResult {
+  int32 term = 1;
+  bool success = 2;
+}

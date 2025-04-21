@@ -8,6 +8,7 @@ class GrpcClientFactory:
     def __init__(self):
         # Dict to store channels for each service
         self._channels = {}
+        self.leader_id = "node1"  # default raft id
 
         # Default timeout for all calls XXX: move this to the docker compose as env variable
         self.default_timeout = 5
@@ -62,14 +63,22 @@ class GrpcClientFactory:
 
         return False
 
+    def update_leader(self, leader_id: str):
+        self.leader_id = leader_id
+        print(f"[Orchestrator] Updated leader id to {self.leader_id}")
+
     def _get_service_address(self, service_name):
         """Get service address from configuration or service discovery"""
         # This could come from environment variables, config files,
         # or a service discovery system like Consul or etcd
+        leader_id = self.leader_id.split("node")[-1]
+        leader_service = f"raft-node-{leader_id}"
+
         service_config = {
             "fraud_detection": "fraud_detection:50051",
             "suggestions": "suggestions:50053",
             "transaction_verification": "transaction_verification:50052",
+            "order_executor": f"{leader_service}:50051",
         }
 
         if service_name not in service_config:

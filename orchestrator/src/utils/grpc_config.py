@@ -14,6 +14,7 @@ class GrpcConfig:
             "suggestions",
             "transaction_verification",
             "fraud_detection",
+            "order_executor",
         ]
     )
     base_path: str = ""
