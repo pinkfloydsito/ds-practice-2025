@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from services.transaction_service import TransactionService
 from services.suggestions_service import SuggestionsService
 from services.fraud_service import FraudService
+from services.raft_service import RaftService
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class OrderOrchestratorService:
         self.transaction_service = TransactionService(grpc_factory, order_event_tracker)
         self.fraud_service = FraudService(grpc_factory, order_event_tracker)
         self.suggestions_service = SuggestionsService(grpc_factory, order_event_tracker)
+        self.raft_service = RaftService(grpc_factory)
 
     def initialize_services(
         self,
@@ -96,6 +98,10 @@ class OrderOrchestratorService:
         self.order_event_tracker.record_event(
             order_id, "orchestrator", "broadcast_clear_order"
         )
+
+        # let's send sample payload to the raft cluster
+        raft_result = self.raft_service.submit_job(order_id)
+        print(f"[Orchestrator] Raft result: {raft_result}")
 
         # Get the updated final vector clock after recording the event
         final_vector_clock = self._get_final_vector_clock(order_id)

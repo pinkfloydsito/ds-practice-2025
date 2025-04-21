@@ -1,0 +1,41 @@
+flowchart TB
+    subgraph "Raft Cluster"
+        subgraph "Node 1 (Leader)"
+            N1State["State: LEADER"]
+            N1Log["Log Entries"]
+            N1Term["Current Term: X"]
+            N1NextIndex["Next Index Map"]
+            N1MatchIndex["Match Index Map"]
+            N1JobQueue["Priority Job Queue"]
+        end
+        
+        subgraph "Node 2 (Follower)"
+            N2State["State: FOLLOWER"]
+            N2Log["Log Entries"]
+            N2Term["Current Term: X"]
+            N2VotedFor["Voted For: Node 1"]
+        end
+        
+        subgraph "Node 3 (Follower)"
+            N3State["State: FOLLOWER"]
+            N3Log["Log Entries"]
+            N3Term["Current Term: X"]
+            N3VotedFor["Voted For: Node 1"]
+        end
+    end
+    
+    Client["Client"]
+
+    %% Communication patterns
+    Client -->|"Submit Job"| N1State
+    N1State -->|"AppendEntries RPC"| N2State
+    N1State -->|"AppendEntries RPC"| N3State
+    N2State -->|"Response"| N1State
+    N3State -->|"Response"| N1State
+    
+    %% Job processing flow
+    Client -->|"1. Submit job"| N1JobQueue
+    N1JobQueue -->|"2. Enqueue"| N1Log
+    N1Log -->|"3. Replicate"| N2Log
+    N1Log -->|"3. Replicate"| N3Log
+    N1Log -->|"4. Process"| N1State

@@ -7,13 +7,11 @@ The Bookstore Application follows a modern microservices-based architecture. The
 ## Client-Facing Layer
 ### REST Checkout API
 The **REST Checkout API** serves as the single entry point for client interactions. It handles customer checkout requests and orchestrates calls to the underlying microservices. Key features include:
-- Managing checkout requests efficiently.
-- Doing validation using schemas and data types.
 - Orchestrating multiple microservices to complete the checkout process.
+- The orchestrator acts as the single point of contact between the microservices.
 
 #### Threading Implementation
-The checkout process implements threading to enhance performance by:
-- Processing multiple microservice calls concurrently.
+Since several microservices are exchanging information we have threading implementation to pass the information between the microservices. The threading implementation is done using **ThreadPoolExecutor** from the **concurrent.futures** module. This allows for efficient management of multiple threads, enabling the application to handle concurrent requests without blocking the main thread. The threading implementation is designed to:
 
 ## Microservices Layer (gRPC Services)
 This layer consists of independent services that handle specific tasks and communicate via **gRPC** 
@@ -47,5 +45,36 @@ This layer consists of independent services that handle specific tasks and commu
 
 ## System Diagram
 ![System Diagram](./images/system-diagram.png)
+
+## Vector Clock Diagram
+![System Diagram](./images/vector-clock-final.png)
+
+## Raft Consensus Algorithm
+
+In our implementation each node has its own state, which can be one of the following:
+- Follower: Passive state where nodes receive updates from the leader
+- Candidate: When a node believes there's no leader and attempts to become one
+- Leader: Coordinates all changes to the distributed system
+
+
+### Core Mechanisms
+
+- Leader Election: When followers don't hear from a leader, they become candidates and request votes
+- Log Replication: Leaders accept commands and replicate them to followers
+- Safety: Various rules ensure consistency even during network partitions
+
+### Practical Features
+
+- Priority-based job queue
+- Thread-safety with multiple locks
+- gRPC communication between nodes
+- Peer discovery and dynamic configuration
+
+### Sequence Diagram
+![Raft Sequence](./images/raft-consensus-sequence.png)
+
+## High-Level Overview of the architecture
+![Raft Consensus Algorithm](./images/raft-consensus-architecture.png)
+
 
 ---

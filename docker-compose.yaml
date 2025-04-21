@@ -1,4 +1,23 @@
-version: '3'
+version: '3.8'
+
+x-raft-node-template: &raft-node-template
+  build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+  restart: unless-stopped
+  networks:
+    - raft-network
+  healthcheck:
+    test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 50051)); s.close()"]
+    interval: 5s
+    timeout: 3s
+    retries: 3
+  environment:
+    - AUTO_DISCOVER=true
+    - WAIT_FOR_NODES=false
+    - NODE_COUNT=5
+    - LOG_LEVEL=INFO
+
 services:
   frontend:
     build:
@@ -13,6 +32,8 @@ services:
     volumes:
       # Mount the frontend directory
       - ./frontend/src:/usr/share/nginx/html
+    networks:
+      - raft-network
   orchestrator:
     env_file:
       - .env
@@ -22,6 +43,9 @@ services:
       context: ./
       # Use the Dockerfile in the orchestrator directory
       dockerfile: ./orchestrator/Dockerfile
+
+    networks:
+      - raft-network
     ports:
       # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
       - 8081:5000
@@ -47,6 +71,8 @@ services:
       context: ./
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./fraud_detection/Dockerfile
+    networks:
+      - raft-network
     ports:
       # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
       - 50051:50051
@@ -70,6 +96,8 @@ services:
       - .env
     ports:
       - 50053:50053
+    networks:
+      - raft-network
     environment:
       # Pass the environment variables to the container
       # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
@@ -88,6 +116,8 @@ services:
       dockerfile: ./db/Dockerfile
     image: bookstore_postgres
     container_name: bookstore_postgres
+    networks:
+      - raft-network
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
@@ -106,6 +136,8 @@ services:
       context: ./
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./transaction_verification/Dockerfile
+    networks:
+      - raft-network
     ports:
       # Expose port 50052 on the host, and map port 50052 of the container to port 50051 on the host
       - 50052:50052
@@ -122,47 +154,94 @@ services:
       # Mount the transection_verification/src directory in the current directory to the /app/transection_verification/src directory in the container
       - ./transaction_verification/src:/app/transaction_verification/src
   
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    command: ["redis-server", "--appendonly", "yes"]
-
-  order_executor:
-    env_file:
-      - .env
-    build:
-      context: .
-      dockerfile: ./order_executor/Dockerfile
-    depends_on:
-      - suggestions
-      - transaction_verification
-      - fraud_detection
-      - redis
+  raft-node-1:
+    <<: *raft-node-template
+    container_name: raft-node1
+    hostname: raft-node1
     environment:
-      - PYTHONUNBUFFERED=TRUE
-      - NODE_ID=${NODE_ID}
-      - PYTHONFILE=/app/order_executor/src/app.py
+      - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
+      - NODE_ID=node1
+      - AUTO_DISCOVER=false
+      - WAIT_FOR_NODES=true
+      - NODE_COUNT=5
+    ports:
+      - "50061:50051"
     volumes:
       - ./utils:/app/utils
       - ./order_executor/src:/app/order_executor/src
-    command: ["python", "order_executor/src/app.py"]
-    
-  order_debug:
-    build:
-      context: .
-      dockerfile: ./order_executor/Dockerfile
+
+  raft-node-2:
+    <<: *raft-node-template
+    container_name: raft-node2
+    hostname: raft-node2
+    environment:
+      - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
+      - NODE_ID=node2
+      - AUTO_DISCOVER=true
+      - WAIT_FOR_NODES=false
+      - NODE_COUNT=5
+    ports:
+      - "50062:50051"
     volumes:
-      - ./order_executor/src:/app/order_executor/src
       - ./utils:/app/utils
-    command: ["python", "order_executor/src/debug.py"]
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - raft-node-1
 
+  raft-node-3:
+    <<: *raft-node-template
+    container_name: raft-node3
+    hostname: raft-node3  
+    environment:
+      - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
+      - NODE_ID=node3
+      - AUTO_DISCOVER=true
+      - WAIT_FOR_NODES=false
+      - NODE_COUNT=5
+    ports:
+      - "50063:50051"
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - raft-node-1
 
-volumes:
-    redis_data:
+  raft-node-4:
+    <<: *raft-node-template
+    container_name: raft-node4
+    hostname: raft-node4
+    environment:
+      - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
+      - NODE_ID=node4
+      - AUTO_DISCOVER=true
+      - WAIT_FOR_NODES=false
+      - NODE_COUNT=5
+    ports:
+      - "50064:50051"
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - raft-node-1
 
-  
+  raft-node-5:
+    <<: *raft-node-template
+    container_name: raft-node5
+    hostname: raft-node5
+    environment:
+      - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
+      - NODE_ID=node5
+      - AUTO_DISCOVER=true
+      - WAIT_FOR_NODES=false
+      - NODE_COUNT=5
+    ports:
+      - "50065:50051"
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    depends_on:
+      - raft-node-1
 
-
+networks:
+  raft-network:
+    driver: bridge

@@ -1,0 +1,27 @@
+stateDiagram-v2
+    direction LR
+    Follower --> Candidate: Election timeout
+    Candidate --> Leader: Receives majority votes
+    Candidate --> Follower: Discovers current leader\nor higher term
+    Leader --> Follower: Discovers higher term
+    
+    Leader --> Follower: Sends heartbeats/AppendEntries
+    
+    state Leader {
+        [*] --> SendHeartbeats
+        SendHeartbeats --> ProcessJobs
+        ProcessJobs --> ReplicateLog
+        ReplicateLog --> SendHeartbeats
+    }
+    
+    state Candidate {
+        [*] --> StartElection
+        StartElection --> CountVotes
+        CountVotes --> [*]
+    }
+    
+    state Follower {
+        [*] --> WaitForHeartbeat
+        WaitForHeartbeat --> ResetElectionTimeout
+        ResetElectionTimeout --> [*]
+    }
