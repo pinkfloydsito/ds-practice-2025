@@ -1,0 +1,77 @@
+sequenceDiagram
+    participant O as Orchestrator
+    participant FD as Fraud Detection
+    participant TV as Transaction Verification
+    participant S as Suggestions
+    participant RE as RAFT Order Executor
+
+    Note over O,RE: Vector Clock Initialization
+    
+    O->>O: Initialize order with ID
+    O->>O: Vector Clock = {O:1}
+    
+    Note over O,RE: Service Initialization Phase
+    
+    O->>+FD: InitializeOrder (VC={O:1})
+    FD->>FD: Update VC = {O:1, FD:1}
+    FD-->>-O: Success (VC={O:1, FD:1})
+    O->>O: Update VC = {O:2, FD:1}
+    
+    O->>+TV: InitializeOrder (VC={O:2, FD:1})
+    TV->>TV: Update VC = {O:2, FD:1, TV:1}
+    TV-->>-O: Success (VC={O:2, FD:1, TV:1})
+    O->>O: Update VC = {O:3, FD:1, TV:1}
+    
+    O->>+S: InitializeOrder (VC={O:3, FD:1, TV:1})
+    S->>S: Update VC = {O:3, FD:1, TV:1, S:1}
+    S-->>-O: Success (VC={O:3, FD:1, TV:1, S:1})
+    O->>O: Update VC = {O:4, FD:1, TV:1, S:1}
+    
+    Note over O,RE: Parallel Processing Phase
+    
+    par Fraud Check
+        O->>+FD: CheckFraud (VC={O:4, FD:1, TV:1, S:1})
+        FD->>FD: Update VC = {O:4, FD:2, TV:1, S:1}
+        FD-->>-O: Success (VC={O:4, FD:2, TV:1, S:1})
+        O->>O: Update VC = {O:5, FD:2, TV:1, S:1}
+    and Billing Check
+        O->>+TV: CheckBilling (VC={O:4, FD:1, TV:1, S:1})
+        TV->>TV: Update VC = {O:4, FD:1, TV:2, S:1}
+        TV-->>-O: Success (VC={O:4, FD:1, TV:2, S:1})
+        O->>O: Update VC = {O:6, FD:2, TV:2, S:1}
+    end
+    
+    O->>+TV: CheckCard (VC={O:6, FD:2, TV:2, S:1})
+    TV->>TV: Update VC = {O:6, FD:2, TV:3, S:1}
+    TV-->>-O: Success (VC={O:6, FD:2, TV:3, S:1})
+    O->>O: Update VC = {O:7, FD:2, TV:3, S:1}
+    
+    O->>+S: GetSuggestions (VC={O:7, FD:2, TV:3, S:1})
+    S->>S: Update VC = {O:7, FD:2, TV:3, S:2}
+    S-->>-O: Success (VC={O:7, FD:2, TV:3, S:2})
+    O->>O: Update VC = {O:8, FD:2, TV:3, S:2}
+    
+    Note over O,RE: Order Submission to RAFT Cluster
+    
+    O->>+RE: Submit Order (VC={O:8, FD:2, TV:3, S:2})
+    RE->>RE: Append to log
+    RE->>RE: Replicate to followers
+    RE->>RE: Update VC = {O:8, FD:2, TV:3, S:2, RE:1}
+    RE-->>-O: Success (VC={O:8, FD:2, TV:3, S:2, RE:1})
+    O->>O: Update VC = {O:9, FD:2, TV:3, S:2, RE:1}
+    
+    Note over O,RE: Cleanup Phase
+    
+    O->>+FD: ClearOrder (VC={O:9, FD:2, TV:3, S:2, RE:1})
+    FD->>FD: Clear if local VC <= received VC
+    FD-->>-O: Success
+    
+    O->>+TV: ClearOrder (VC={O:9, FD:2, TV:3, S:2, RE:1})
+    TV->>TV: Clear if local VC <= received VC
+    TV-->>-O: Success
+    
+    O->>+S: ClearOrder (VC={O:9, FD:2, TV:3, S:2, RE:1})
+    S->>S: Clear if local VC <= received VC
+    S-->>-O: Success
+    
+    Note over O,RE: Final Response to Client
