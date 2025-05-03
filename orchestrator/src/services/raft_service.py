@@ -28,18 +28,7 @@ class RaftService:
     def __init__(self, grpc_factory):
         self.grpc_factory = grpc_factory
 
-    def _create_sample_order(self):
-        """Create a sample order JSON."""
-        return {
-            "order_id": str(uuid.uuid4()),
-            "customer_id": f"cust_{random.randint(1000, 9999)}",
-            "product_id": f"product_{random.randint(100, 999)}",
-            "quantity": random.randint(1, 10),
-            "total_price": round(random.uniform(10.0, 500.0), 2),
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    def submit_job(self, order_id: str) -> ServiceResult:
+    def submit_job(self, order_id: str, payload) -> ServiceResult:
         """Get book suggestions."""
         result = ServiceResult()
         try:
@@ -49,12 +38,9 @@ class RaftService:
                 secure=False,
             )
 
-            # TODO: change this
-            order = self._create_sample_order()
-
             request = raft.JobRequest(
                 job_id=order_id,
-                payload=json.dumps(order),
+                payload=json.dumps(payload),
                 priority=0,  # this is calculated in the order executor
             )
 
@@ -65,7 +51,7 @@ class RaftService:
                 print(f"Leader identified: {response.leader_id}")
                 self.grpc_factory.update_leader(response.leader_id)
 
-                return self.submit_job(order_id)
+                return self.submit_job(order_id, payload)
 
             result.success = response.success
             return result

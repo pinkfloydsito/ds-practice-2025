@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Any, Optional
+from datetime import datetime
 
 
 @dataclass
@@ -35,6 +36,7 @@ class OrderInfo:
     book_tokens: List[str]
     amount: float
     payment_method: str = "Credit Card"
+    order_date: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 @dataclass

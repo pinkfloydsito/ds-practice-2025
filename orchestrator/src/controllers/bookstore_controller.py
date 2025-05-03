@@ -8,6 +8,7 @@ from typing import List
 from google.protobuf.json_format import MessageToDict
 from sqlalchemy.orm import sessionmaker
 
+from services.raft_service import RaftService
 from schema import (
     CheckoutRequestSchema,
     OrderStatusResponseSchema,
@@ -130,6 +131,34 @@ def checkout():
         ), 500
 
 
+@bookstore_bp.route("/v2/checkout", methods=["POST"])
+def checkout_v2():
+    """Raft - DB - Demo"""
+    order_id = str(uuid.uuid4())
+    grpc_factory = current_app.grpc_factory
+
+    try:
+        # 1) Validate the request
+        schema = CheckoutRequestSchema()
+        json_data = schema.load(request.json)
+
+        order_data = items_from_data(order_id, json_data)
+        raft_service = RaftService(grpc_factory)
+
+        raft_service.submit_job(order_id, order_data)
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return jsonify(
+            {
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "An internal error occurred",
+                }
+            }
+        ), 500
+
+
 @bookstore_bp.route("/books", methods=["GET"])
 def list_books():
     Session = sessionmaker(bind=engine)
@@ -190,3 +219,13 @@ def list_books():
         ), 500
     finally:
         session.close()
+
+
+def items_from_data(order_id, data) -> OrderInfo:
+    books = data.get("items", [])
+    book_tokens = [b["name"] for b in books]
+    amount = sum(b.get("price", 10) for b in books)
+
+    order = OrderInfo(order_id=order_id, book_tokens=book_tokens, amount=amount)
+
+    return order

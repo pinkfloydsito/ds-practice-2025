@@ -6,7 +6,7 @@ x-raft-node-template: &raft-node-template
       dockerfile: ./order_executor/Dockerfile
   restart: unless-stopped
   networks:
-    - raft-network
+    - boostore-network
   healthcheck:
     test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 50051)); s.close()"]
     interval: 5s
@@ -33,7 +33,7 @@ services:
       # Mount the frontend directory
       - ./frontend/src:/usr/share/nginx/html
     networks:
-      - raft-network
+      - boostore-network
   orchestrator:
     env_file:
       - .env
@@ -45,7 +45,7 @@ services:
       dockerfile: ./orchestrator/Dockerfile
 
     networks:
-      - raft-network
+      - boostore-network
     ports:
       # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
       - 8081:5000
@@ -72,7 +72,7 @@ services:
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./fraud_detection/Dockerfile
     networks:
-      - raft-network
+      - boostore-network
     ports:
       # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
       - 50051:50051
@@ -97,7 +97,7 @@ services:
     ports:
       - 50053:50053
     networks:
-      - raft-network
+      - boostore-network
     environment:
       # Pass the environment variables to the container
       # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
@@ -117,7 +117,7 @@ services:
     image: bookstore_postgres
     container_name: bookstore_postgres
     networks:
-      - raft-network
+      - boostore-network
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
@@ -137,7 +137,7 @@ services:
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./transaction_verification/Dockerfile
     networks:
-      - raft-network
+      - boostore-network
     ports:
       # Expose port 50052 on the host, and map port 50052 of the container to port 50051 on the host
       - 50052:50052
@@ -242,6 +242,63 @@ services:
     depends_on:
       - raft-node-1
 
+  db-node1:
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    environment:
+      - DB_NODE_ID=db-node1
+      - DB_PORT=50052
+      - DB_ROLE=REPLICA  # Start as replica, leader will be elected
+      - DB_PEERS=db-node2:50052,db-node3:50052
+      - DB_NODE_COUNT=3
+    ports:
+      - "50066:50052"
+    networks:
+      - bookstore-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 50052))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Second database node
+  db-node2:
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    environment:
+      - DB_NODE_ID=db-node2
+      - DB_PORT=50052
+      - DB_ROLE=REPLICA  # Start as replica, leader will be elected
+      - DB_PEERS=db-node1:50052,db-node3:50052
+      - DB_NODE_COUNT=3
+    ports:
+      - "50067:50052"
+    networks:
+      - bookstore-network
+    depends_on:
+      - db-node1
+
+  # Third database node
+  db-node3:
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    environment:
+      - DB_NODE_ID=db-node3
+      - DB_PORT=50052
+      - DB_ROLE=REPLICA  # Start as replica, leader will be elected
+      - DB_PEERS=db-node1:50052,db-node2:50052
+      - DB_NODE_COUNT=3
+    ports:
+      - "50068:50052"
+    networks:
+      - bookstore-network
+    depends_on:
+      - db-node1
+
 networks:
-  raft-network:
+  boostore-network:
     driver: bridge
