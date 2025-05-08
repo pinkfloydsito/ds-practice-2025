@@ -1,4 +1,5 @@
 import os
+import traceback
 import sys
 import uuid
 from flask import Blueprint, request, jsonify, current_app
@@ -133,7 +134,6 @@ def checkout():
 
 @bookstore_bp.route("/v2/checkout", methods=["POST"])
 def checkout_v2():
-    """Raft - DB - Demo"""
     order_id = str(uuid.uuid4())
     grpc_factory = current_app.grpc_factory
 
@@ -145,10 +145,18 @@ def checkout_v2():
         order_data = items_from_data(order_id, json_data)
         raft_service = RaftService(grpc_factory)
 
-        raft_service.submit_job(order_id, order_data)
+        result = raft_service.submit_job(order_id, order_data)
+        success = result.success
+        print(result)
+        if not success:
+            return jsonify(result), 400
+
+        return jsonify(OrderStatusResponseSchema().dump(result))
 
     except Exception as e:
         print(f"Unexpected error: {e}")
+        traceback.print_exc()  # debugging purposes
+
         return jsonify(
             {
                 "error": {

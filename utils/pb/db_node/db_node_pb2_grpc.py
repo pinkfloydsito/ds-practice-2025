@@ -40,6 +40,11 @@ class DatabaseStub(object):
                 request_serializer=db__node__pb2.ReadRequest.SerializeToString,
                 response_deserializer=db__node__pb2.ReadResponse.FromString,
                 _registered_method=True)
+        self.ReadAll = channel.unary_unary(
+                '/db_node.Database/ReadAll',
+                request_serializer=db__node__pb2.ReadAllRequest.SerializeToString,
+                response_deserializer=db__node__pb2.ReadAllResponse.FromString,
+                _registered_method=True)
         self.Write = channel.unary_unary(
                 '/db_node.Database/Write',
                 request_serializer=db__node__pb2.WriteRequest.SerializeToString,
@@ -49,6 +54,11 @@ class DatabaseStub(object):
                 '/db_node.Database/DecrementStock',
                 request_serializer=db__node__pb2.DecrementRequest.SerializeToString,
                 response_deserializer=db__node__pb2.DecrementResponse.FromString,
+                _registered_method=True)
+        self.IncrementStock = channel.unary_unary(
+                '/db_node.Database/IncrementStock',
+                request_serializer=db__node__pb2.IncrementRequest.SerializeToString,
+                response_deserializer=db__node__pb2.IncrementResponse.FromString,
                 _registered_method=True)
         self.Heartbeat = channel.unary_unary(
                 '/db_node.Database/Heartbeat',
@@ -78,6 +88,12 @@ class DatabaseServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ReadAll(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Write(self, request, context):
         """Write a value for a key - only primary node accepts
         """
@@ -88,6 +104,12 @@ class DatabaseServicer(object):
     def DecrementStock(self, request, context):
         """Atomic decrement operation for stock management
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def IncrementStock(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -121,6 +143,11 @@ def add_DatabaseServicer_to_server(servicer, server):
                     request_deserializer=db__node__pb2.ReadRequest.FromString,
                     response_serializer=db__node__pb2.ReadResponse.SerializeToString,
             ),
+            'ReadAll': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReadAll,
+                    request_deserializer=db__node__pb2.ReadAllRequest.FromString,
+                    response_serializer=db__node__pb2.ReadAllResponse.SerializeToString,
+            ),
             'Write': grpc.unary_unary_rpc_method_handler(
                     servicer.Write,
                     request_deserializer=db__node__pb2.WriteRequest.FromString,
@@ -130,6 +157,11 @@ def add_DatabaseServicer_to_server(servicer, server):
                     servicer.DecrementStock,
                     request_deserializer=db__node__pb2.DecrementRequest.FromString,
                     response_serializer=db__node__pb2.DecrementResponse.SerializeToString,
+            ),
+            'IncrementStock': grpc.unary_unary_rpc_method_handler(
+                    servicer.IncrementStock,
+                    request_deserializer=db__node__pb2.IncrementRequest.FromString,
+                    response_serializer=db__node__pb2.IncrementResponse.SerializeToString,
             ),
             'Heartbeat': grpc.unary_unary_rpc_method_handler(
                     servicer.Heartbeat,
@@ -186,6 +218,33 @@ class Database(object):
             _registered_method=True)
 
     @staticmethod
+    def ReadAll(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/db_node.Database/ReadAll',
+            db__node__pb2.ReadAllRequest.SerializeToString,
+            db__node__pb2.ReadAllResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
     def Write(request,
             target,
             options=(),
@@ -229,6 +288,33 @@ class Database(object):
             '/db_node.Database/DecrementStock',
             db__node__pb2.DecrementRequest.SerializeToString,
             db__node__pb2.DecrementResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def IncrementStock(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/db_node.Database/IncrementStock',
+            db__node__pb2.IncrementRequest.SerializeToString,
+            db__node__pb2.IncrementResponse.FromString,
             options,
             channel_credentials,
             insecure,

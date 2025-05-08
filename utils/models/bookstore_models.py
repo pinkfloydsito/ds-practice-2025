@@ -35,6 +35,7 @@ class OrderInfo:
     order_id: str
     book_tokens: List[str]
     amount: float
+    price: float = 10.0
     payment_method: str = "Credit Card"
     order_date: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 

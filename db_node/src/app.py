@@ -20,7 +20,7 @@ MAX_ELECTION_TIMEOUT = 3.0  # seconds
 
 # Import protobuf modules - assuming similar path structure
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
-PROTO_DIR = os.path.abspath(os.path.join(FILE, "../../../utils/pb/database"))
+PROTO_DIR = os.path.abspath(os.path.join(FILE, "../../../utils/pb/db_node"))
 sys.path.insert(0, PROTO_DIR)
 
 try:
@@ -190,7 +190,6 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
 
     def _reset_election_timeout(self) -> None:
         """Reset the election timeout timer."""
-        # Skip if we're a primary
         if self.get_role() == NodeRole.PRIMARY:
             return
 
@@ -220,39 +219,37 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
 
     def _start_election(self) -> None:
         """Start an election to become the primary."""
-        # Skip if shutting down or already a primary
         if self._shutdown_event.is_set() or self.get_role() == NodeRole.PRIMARY:
             return
 
-        # Check and set election in progress
         with self._election_lock:
             if self._election_in_progress:
-                return  # Skip if election already in progress
+                return
 
             self._election_in_progress = True
             self.current_term += 1
-            self.voted_for = self.node_id  # Vote for ourselves
+            self.voted_for = self.node_id
             election_term = self.current_term
 
-        # Change to candidate role
         self.set_role(NodeRole.CANDIDATE)
-
         print(f"Node {self.node_id} starting election for term {election_term}")
 
-        # Count votes (starting with our own vote)
-        votes_received = 1
-        votes_needed = len(self.peers) // 2 + 1  # Majority of nodes
+        # Use a thread-safe counter for votes
+        votes_received = {"count": 1}  # Starting with our own vote
+        votes_needed = len(self.peers) // 2 + 1
+
+        # Create a lock for vote counting
+        vote_lock = threading.Lock()
 
         # Request votes from all peers
         for peer in self.peers:
-            # Send vote requests in parallel
             threading.Thread(
                 target=self._request_vote_from_peer,
-                args=(peer, election_term, votes_received, votes_needed),
+                args=(peer, election_term, votes_received, votes_needed, vote_lock),
                 daemon=True,
             ).start()
 
-        # Set a timeout for the election
+        # Set election timeout
         election_timeout = threading.Timer(
             MAX_ELECTION_TIMEOUT, self._handle_election_timeout, args=(election_term,)
         )
@@ -260,11 +257,15 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
         election_timeout.start()
 
     def _request_vote_from_peer(
-        self, peer: str, term: int, votes_received: int, votes_needed: int
+        self,
+        peer: str,
+        term: int,
+        votes_received: dict,
+        votes_needed: int,
+        vote_lock: threading.Lock,
     ) -> None:
         """Request vote from a peer."""
         try:
-            # Create request
             request = db_node_pb2.VoteRequest(
                 term=term,
                 candidate_id=self.node_id,
@@ -273,35 +274,32 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
                 else -1,
             )
 
-            # Send request
             with grpc.insecure_channel(peer) as channel:
                 stub = db_node_pb2_grpc.DatabaseStub(channel)
                 response = stub.RequestVote(request, timeout=1.0)
 
-                # Process response
                 if response.vote_granted:
                     print(f"Received vote from {peer} for term {term}")
 
-                    # Check if we're still a candidate in the same term
                     with self._election_lock:
                         if (
                             self.get_role() == NodeRole.CANDIDATE
                             and self.current_term == term
                             and self._election_in_progress
                         ):
-                            # Increment votes and check if we have enough
-                            nonlocal votes_received
-                            votes_received += 1
+                            # Safely increment votes
+                            with vote_lock:
+                                votes_received["count"] += 1
+                                current_votes = votes_received["count"]
 
-                            if votes_received >= votes_needed:
-                                # We won! Become primary
+                            if current_votes >= votes_needed:
                                 self._become_primary(term)
                 else:
-                    # If they responded with a higher term, update our term
                     if response.term > term:
                         self.set_current_term(response.term)
                         self.set_role(NodeRole.REPLICA)
-                        self._election_in_progress = False
+                        with self._election_lock:
+                            self._election_in_progress = False
                         self._reset_election_timeout()
 
         except grpc.RpcError as e:
@@ -524,6 +522,53 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
 
             # Deny vote
             return db_node_pb2.VoteResponse(vote_granted=False, term=self.current_term)
+
+    def ReadAll(self, request, context):
+        """
+
+        Args:
+            request: ReadAllRequest
+            context: gRPC context
+
+        Returns:
+            ReadAllResponse with items and pagination info
+        """
+        with self._data_lock:
+            # Get all keys and sort them
+            all_keys = sorted(list(self.data_store.keys()))
+
+            # Build response items
+            items = []
+            for key in all_keys:
+                value = self.data_store[key]
+                version = self.versions.get(key, 0)
+
+                # Determine value type
+                value_type = db_node_pb2.WriteRequest.ValueType.STRING
+                if isinstance(value, int):
+                    value_type = db_node_pb2.WriteRequest.ValueType.INT
+                elif isinstance(value, float):
+                    value_type = db_node_pb2.WriteRequest.ValueType.FLOAT
+                elif isinstance(value, (dict, list)):
+                    value_type = db_node_pb2.WriteRequest.ValueType.JSON
+
+                # Convert value to string representation
+                if value_type == db_node_pb2.WriteRequest.ValueType.JSON:
+                    value_str = json.dumps(value)
+                else:
+                    value_str = str(value)
+
+                items.append(
+                    db_node_pb2.KeyValuePair(
+                        key=key, value=value_str, version=version, type=value_type
+                    )
+                )
+
+            return db_node_pb2.ReadAllResponse(
+                success=True,
+                items=items,
+                total_returned=len(items),
+            )
 
     def Read(self, request, context):
         """

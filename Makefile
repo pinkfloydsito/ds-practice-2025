@@ -1,5 +1,5 @@
 checkout:
-	curl 'http://localhost:8081/checkout' \
+	curl 'http://localhost:8081/v2/checkout' \
 	  -H 'Accept: */*' \
 	  -H 'Accept-Language: en-US,en;q=0.9' \
 	  -H 'Cache-Control: no-cache' \

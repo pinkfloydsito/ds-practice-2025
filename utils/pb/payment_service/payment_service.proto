@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package payment;
+
+service PaymentService {
+  // Phase 1 of 2PC: Check if payment can be processed
+  rpc Prepare(PrepareRequest) returns (PrepareResponse);
+  
+  // Phase 2 of 2PC: Process the payment
+  rpc Commit(CommitRequest) returns (CommitResponse);
+  
+  // Abort the payment transaction
+  rpc Abort(AbortRequest) returns (AbortResponse);
+  
+  // Get payment status
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
+}
+
+// Prepare phase
+message PrepareRequest {
+  string transaction_id = 1;
+  double amount = 2;
+  string payment_method = 3;
+  string customer_id = 4;
+  map<string, string> metadata = 5;
+}
+
+message PrepareResponse {
+  bool can_commit = 1;
+  string error_message = 2;
+  string payment_id = 3;
+}
+
+// Commit phase
+message CommitRequest {
+  string transaction_id = 1;
+  string payment_id = 2;
+}
+
+message CommitResponse {
+  bool success = 1;
+  string error_message = 2;
+  PaymentResult payment_result = 3;
+}
+
+// Payment result
+message PaymentResult {
+  string payment_id = 1;
+  double amount = 2;
+  string payment_method = 3;
+  string status = 4;
+  string confirmation_code = 5;
+  int64 timestamp = 6;
+}
+
+// Abort phase
+message AbortRequest {
+  string transaction_id = 1;
+  string payment_id = 2;
+  string reason = 3;
+}
+
+message AbortResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Status request
+message StatusRequest {
+  string transaction_id = 1;
+}
+
+message StatusResponse {
+  string transaction_id = 1;
+  string status = 2;
+  string payment_id = 3;
+  double amount = 4;
+  string payment_method = 5;
+  int64 last_updated = 6;
+  string error_message = 7;
+}
