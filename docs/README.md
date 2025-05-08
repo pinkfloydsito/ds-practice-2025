@@ -82,7 +82,6 @@ The system implements a comprehensive failure handling model to ensure resilienc
 
 2. **Service Communication Failures**
    - gRPC error handling for service unavailability
-   - Circuit breaker pattern prevents cascading failures
    - Consistent error response format
 
 3. **Data Consistency**
@@ -136,6 +135,227 @@ The Bookstore Microservices architecture follows several system models to ensure
    - Automatic failover and recovery
 
 5. **Fault Tolerance Model**
-   - Circuit breaker pattern prevents cascading failures
    - Graceful degradation when services are unavailable
    - Consistent error handling and reporting
+
+
+## Checkpoint 3
+
+## Overview
+The Bookstore Application now includes a distributed database system with primary-replica architecture and leader election capabilities. The database system consists of  3 nodes working together to provide high availability and consistency.
+
+### Database Nodes Architecture
+
+#### Node Types
+- **Primary Node**: Handles all write operations and replicates changes to replicas
+- **Replica Nodes**: Handle read operations and participate in leader elections
+- **Candidate Nodes**: Temporary state during leader election
+
+#### Leader Election
+The database uses a Raft-like consensus algorithm for leader election:
+- Election timeouts trigger new elections
+- Nodes vote for candidates based on log consistency
+- Majority votes required to become leader
+- Split-brain prevention through term tracking
+
+### Database Service Configuration
+
+#### Ports
+- **db-node1**: 50066 (external) → 50052 (internal)
+- **db-node2**: 50067 (external) → 50052 (internal)
+- **db-node3**: 50068 (external) → 50052 (internal)
+
+#### Environment Variables
+```yaml
+DB_NODE_ID=db-node1
+DB_PORT=50052
+DB_ROLE=REPLICA
+DB_PEERS=db-node2:50052,db-node3:50052
+DB_NODE_COUNT=3
+```
+
+### Operations
+
+#### Read Operations
+- Can be performed on any node (primary or replica)
+- Round-robin load balancing is applied for distribution
+- Automatic fallback if a node is unavailable
+
+#### Write Operations
+- Must be performed on the primary node
+- Redirection happens if a replica receives a write request
+- Version tracking for each key
+
+#### Stock Management
+- Atomic decrement operations for inventory
+- Stock stored with key format: `stock:{book_name}`
+- Insufficient stock checks before decrementing
+
+### API Endpoints
+
+#### DatabaseService Methods
+- `Read(key)`: Read a value from the database
+- `Write(key, value, type)`: Write a value to the database
+- `DecrementStock(key, amount)`: Atomically decrement stock
+- `GetStatus()`: Get node status and role information
+- `ReadAll()`: Read all key-value pairs from database (debugging purposes mainly)
+
+### Health Checks
+Each database node includes health checks:
+```yaml
+healthcheck:
+  test: ["CMD", "python", "-c", "import socket; s = socket.socket(); s.connect(('localhost', 50052))"]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+```
+
+### Database Client
+The system includes a DatabaseClient that:
+- Automatically discovers the primary node
+- Handles failover and retries
+- Provides consistent interface for all operations
+- Manages gRPC connections efficiently
+
+## Two-Phase Commit Protocol
+
+### Overview
+The Two-Phase Commit (2PC) protocol is added to ensure consistency across distributed transactions involving multiple services. This ensures that either all operations succeed or all are rolled back, maintaining data integrity.
+
+### Architecture Components
+
+#### TwoPhaseCommitCoordinator
+The coordinator manages the entire 2PC process:
+- Generates unique transaction IDs
+- Tracks transaction state throughout lifecycle
+- Manages communication with all participants
+- Handles commit/abort decisions
+
+#### Participants
+1. **Database Service**: Manages book inventory
+2. **Payment Service**: Processes financial transactions (simulated right now)
+
+### Protocol Phases
+
+#### Phase 1: Prepare
+1. Coordinator asks all participants if they can commit
+2. Database checks stock availability
+3. Payment service validates payment method
+4. Participants respond with vote (can_commit/cannot_commit)
+
+#### Phase 2: Commit/Abort
+- If all participants vote "can commit" → Coordinator sends COMMIT
+- If any participant votes "cannot commit" → Coordinator sends ABORT
+- Participants execute the decision and acknowledge
+
+### Transaction Flow
+![Transaction Flow](./images/2pc-coordination.png)
+
+### Implementation
+
+#### Database Operations
+- **Prepare**: Validates stock availability
+- **Commit**: Decrements stock atomically
+- **Abort**: Cancels transaction (no changes needed)
+
+#### Payment Operations
+- **Prepare**: Validates payment method and customer
+- **Commit**: Processes payment and generates confirmation
+- **Abort**: Cancels payment authorization
+
+#### Transaction States
+- `STARTED`: Transaction initiated
+- `PREPARING`: Asking participants to prepare
+- `COMMITTING`: Telling participants to commit
+- `COMMITTED`: Transaction completed successfully
+- `ABORTING`: Telling participants to abort
+- `ABORTED`: Transaction cancelled
+
+### Error Handling
+
+#### Failure Scenarios
+1. **Participant Failure During Prepare**: Transaction aborted
+2. **Participant Failure During Commit**: Retry with timeout
+3. **Coordinator Failure**: Transaction times out and is aborted
+
+#### Compensation
+- If commit fails after some participants have committed, compensating transactions may be needed
+- Current implementation focuses on preventing partial commits
+
+### Configuration
+
+#### Environment Variables
+```yaml
+DB_NODES=db-node1:50052,db-node2:50052,db-node3:50052
+PAYMENT_SERVICE=payment-service:50053
+```
+
+#### Timeouts
+- Default timeout: 5 seconds per operation
+- Maximum retries: 3 attempts
+
+### Payment Service
+
+#### Port Configuration
+- Internal port: 50053
+- Service name: `payment-service`
+
+#### Payment Methods
+- Credit Card (95% success rate in simulation)
+- Bank Transfer (90% success rate in simulation)
+
+#### Payment Flow
+1. Generate unique payment ID
+2. Validate payment method
+3. Process payment on commit
+4. Generate confirmation code
+
+### Integration with RAFT
+
+The 2PC coordinator is integrated with the RAFT order executor:
+1. RAFT cluster receives and prioritizes orders
+2. Leader node executes orders using 2PC
+3. Results are recorded in RAFT log
+4. Failed transactions trigger compensating actions
+
+### End-to-End Order Processing
+
+This diagram shows how all components work together to process an order from client request to completion.
+
+![end-to-end processing](./images/e2e-processing.png)
+## Complete Order Processing Sequence
+![checkout-flow](./images/checkout-flow-diagram.png)
+
+### 3. Distribution Flow (V2)
+- Orchestrator → RAFT Leader
+- Leader → Job Queue (priority-based)
+- Job Queue → Order Executor
+
+### 4. Transaction Flow
+- Order Executor → 2PC Coordinator
+- 2PC → Database + Payment (parallel prepare)
+- 2PC → Database + Payment (parallel commit)
+
+### 5. Data Operations
+- Write operations → Primary node only
+- Read operations → Load balanced across all nodes
+- Replication → Primary to replicas
+
+### 6. Result Flow
+- Services → Orchestrator → Client
+
+## Key Integration Points
+
+1. **REST to gRPC Bridge**: Orchestrator translates HTTP to gRPC
+2. **RAFT to 2PC Bridge**: Order Executor manages transaction lifecycle
+3. **Database Service Layer**: Abstracts distributed database complexity
+4. **Priority Queue**: Ensures important orders processed first
+
+## System Guarantees
+
+1. **Consistency**: RAFT consensus + 2PC transactions
+2. **Availability**: Leader election + replica failover
+3. **Partition Tolerance**: Split-brain prevention
+4. **Durability**: Replicated logs + database replication
+5. **Atomicity**: Two-phase commit protocol

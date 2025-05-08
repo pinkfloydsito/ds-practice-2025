@@ -1,0 +1,100 @@
+sequenceDiagram
+    participant C as Client
+    participant O as Orchestrator
+    participant R as RAFT Leader
+    participant DB as Database
+    participant OE as Order Executor
+    participant TPC as 2PC Coordinator
+    participant DBC as Database Cluster
+    participant PS as Payment Service
+    
+    Note over C,PS: Checkout V2 Flow - Claim Check Pattern
+    
+    %% Initial Order Submission
+    C->>O: POST /v2/checkout
+    O->>O: Validate Request
+    O->>O: Extract Order Data
+    O->>O: Generate Order ID
+    
+    O->>DB: Save Order (Status: PENDING)
+    DB-->>O: Order Saved
+    
+    O->>R: Submit Job to RAFT
+    
+    alt RAFT Node is Leader
+        R->>R: Calculate Priority
+        R->>R: Add to Job Queue
+        R->>R: Replicate to Followers
+        R-->>O: Accepted
+    else RAFT Node is Follower
+        R-->>O: Redirect to Leader
+        O->>R: Retry with Leader
+        R-->>O: Accepted
+    end
+    
+    O-->>C: 202 Accepted + Order ID
+    
+    Note over C,DB: Client can now query status
+    
+    %% Asynchronous Processing
+    Note over R,PS: Asynchronous Order Processing
+    
+    R->>OE: Process Job
+    OE->>DB: Update Order (Status: PROCESSING)
+    
+    OE->>TPC: Execute Order (2PC)
+    
+    Note over TPC,PS: Phase 1 - Prepare
+    
+    par Check Stock
+        TPC->>DBC: Prepare (Check Stock)
+        DBC->>DBC: Verify Stock Availability
+        DBC-->>TPC: Vote: Can Commit
+    and Validate Payment
+        TPC->>PS: Prepare (Validate Payment)
+        PS->>PS: Validate Payment Method
+        PS-->>TPC: Vote: Can Commit
+    end
+    
+    alt All Votes = Can Commit
+        Note over TPC,PS: Phase 2 - Commit
+        
+        par Decrement Stock
+            TPC->>DBC: Commit (Decrement Stock)
+            DBC->>DBC: Atomically Decrement
+            DBC-->>TPC: ACK + New Stock Level
+        and Process Payment
+            TPC->>PS: Commit (Process Payment)
+            PS->>PS: Process Transaction
+            PS-->>TPC: ACK + Confirmation
+        end
+        
+        TPC-->>OE: Success + Results
+        OE->>DB: Update Order (Status: COMPLETED)
+        OE-->>R: Job Complete
+        
+    else Any Vote = Cannot Commit
+        Note over TPC,PS: Phase 2 - Abort
+        
+        par Abort Database
+            TPC->>DBC: Abort
+            DBC-->>TPC: ACK
+        and Abort Payment
+            TPC->>PS: Abort
+            PS-->>TPC: ACK
+        end
+        
+        TPC-->>OE: Failed + Reason
+        OE->>DB: Update Order (Status: FAILED, Reason)
+        OE-->>R: Job Failed
+    end
+    
+    %% Status Checking
+    Note over C,DB: Client Queries Order Status
+    
+    loop Check Status
+        C->>O: GET /orders/{orderId}
+        O->>DB: Query Order Status
+        DB-->>O: Order Status
+        O-->>C: Order Status Response
+    end

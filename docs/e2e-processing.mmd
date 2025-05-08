@@ -1,0 +1,64 @@
+graph TB
+    subgraph "Client Layer"
+        WEB[Web UI :8080]
+    end
+    
+    subgraph "API Gateway"
+        REST[REST Orchestrator :8081]
+        V2[v2 checkout endpoint]
+        DBC[database endpoints]
+    end
+    
+    subgraph "Distributed Processing"
+        R1[RAFT-1 Leader :50061]
+        R2[RAFT-2 :50062]
+        R3[RAFT-3 :50063]
+        R4[RAFT-4 :50064]
+        R5[RAFT-5 :50065]
+        JQ[Priority Job Queue]
+        OE[Order Executor]
+    end
+    
+    subgraph "Transaction Coordination"
+        TPC[2PC Coordinator]
+        PS[Payment Service :50053]
+    end
+    
+    subgraph "Data Storage"
+        DB1[DB Primary :50066]
+        DB2[DB Replica :50067]
+        DB3[DB Replica :50068]
+        PG[(PostgreSQL :5432)]
+    end
+    
+    WEB --> REST
+    REST --> V2
+    REST --> DBC
+    
+    V2 --> R1
+    R1 --> JQ
+    JQ --> OE
+    OE --> TPC
+    
+    TPC --> DB1
+    TPC --> PS
+    
+    R1 -.-> R2
+    R2 -.-> R3
+    R3 -.-> R4
+    R4 -.-> R5
+    R5 -.-> R1
+    
+    DB1 -.-> DB2
+    DB2 -.-> DB3
+    DB3 -.-> DB1
+    
+    SUG --> PG
+    DBC --> DB1
+    DBC --> DB2
+    DBC --> DB3
+    
+    style R1 fill:#fffff,stroke:#333,stroke-width:8px
+    style DB1 fill:#fffff,stroke:#333,stroke-width:8px
+    style TPC fill:#fffff,stroke:#333,stroke-width:8px
+    style PG fill:#fff,stroke:#333,stroke-width:8px
