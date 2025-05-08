@@ -1,13 +1,10 @@
+import traceback
 import os
 import json
 
-from datetime import datetime
-import random
-import uuid
 import grpc
 
-from typing import List, Dict
-
+from dataclasses import asdict
 from utils.grpc_config import GrpcConfig
 from google.protobuf.json_format import MessageToDict
 
@@ -40,12 +37,12 @@ class RaftService:
 
             request = raft.JobRequest(
                 job_id=order_id,
-                payload=json.dumps(payload),
-                priority=0,  # this is calculated in the order executor
+                payload=json.dumps(asdict(payload)),
+                priority=0,  # order executor should handle priority
             )
 
             response = stub.SubmitJob(request)
-            # debug print(response)
+            print("debugging", response)
 
             if not response.success:
                 print(f"Leader identified: {response.leader_id}")
@@ -58,4 +55,5 @@ class RaftService:
         except grpc.RpcError as e:
             print(f"gRPC error in submit_job: {e.code()}: {e.details()}")
             result.error = f"gRPC error: {e.code()}: {e.details()}"
+            traceback.print_exc()
             return result

@@ -2,15 +2,43 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class KeyValuePair(_message.Message):
+    __slots__ = ("key", "value", "version", "type")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    TYPE_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    value: str
+    version: int
+    type: WriteRequest.ValueType
+    def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ..., version: _Optional[int] = ..., type: _Optional[_Union[WriteRequest.ValueType, str]] = ...) -> None: ...
 
 class ReadRequest(_message.Message):
     __slots__ = ("key",)
     KEY_FIELD_NUMBER: _ClassVar[int]
     key: str
     def __init__(self, key: _Optional[str] = ...) -> None: ...
+
+class ReadAllRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ReadAllResponse(_message.Message):
+    __slots__ = ("success", "message", "items", "total_returned")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ITEMS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_RETURNED_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    message: str
+    items: _containers.RepeatedCompositeFieldContainer[KeyValuePair]
+    total_returned: int
+    def __init__(self, success: bool = ..., message: _Optional[str] = ..., items: _Optional[_Iterable[_Union[KeyValuePair, _Mapping]]] = ..., total_returned: _Optional[int] = ...) -> None: ...
 
 class ReadResponse(_message.Message):
     __slots__ = ("success", "value", "version", "message")
@@ -64,7 +92,31 @@ class DecrementRequest(_message.Message):
     amount: float
     def __init__(self, key: _Optional[str] = ..., amount: _Optional[float] = ...) -> None: ...
 
+class IncrementRequest(_message.Message):
+    __slots__ = ("key", "amount")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    AMOUNT_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    amount: float
+    def __init__(self, key: _Optional[str] = ..., amount: _Optional[float] = ...) -> None: ...
+
 class DecrementResponse(_message.Message):
+    __slots__ = ("success", "new_value", "message", "current_value", "version", "primary_id")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    NEW_VALUE_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    CURRENT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    PRIMARY_ID_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    new_value: float
+    message: str
+    current_value: float
+    version: int
+    primary_id: str
+    def __init__(self, success: bool = ..., new_value: _Optional[float] = ..., message: _Optional[str] = ..., current_value: _Optional[float] = ..., version: _Optional[int] = ..., primary_id: _Optional[str] = ...) -> None: ...
+
+class IncrementResponse(_message.Message):
     __slots__ = ("success", "new_value", "message", "current_value", "version", "primary_id")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     NEW_VALUE_FIELD_NUMBER: _ClassVar[int]

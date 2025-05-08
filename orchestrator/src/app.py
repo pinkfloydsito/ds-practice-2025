@@ -34,6 +34,8 @@ def create_app(config_object="config.default"):
 
     register_vector_clock(app)
 
+    register_database_service(app)
+
     register_error_handlers(app)
 
     return app
@@ -41,6 +43,18 @@ def create_app(config_object="config.default"):
 
 def register_grpc(app):
     app.grpc_factory = GrpcClientFactory()
+
+
+def register_database_service(app):
+    """Initialize and register the database service."""
+    from services.database_service import DatabaseService
+
+    # Get database nodes from environment
+    db_nodes_env = os.getenv("DB_NODES", "db-node1:50052,db-node2:50052,db-node3:50052")
+    db_nodes = db_nodes_env.split(",")
+
+    # Initialize database service
+    app.database_service = DatabaseService(db_nodes)
 
 
 def register_vector_clock(app):
@@ -60,6 +74,7 @@ def register_blueprints(app):
         ("controllers.bookstore_controller", "bookstore_bp"),
         ("controllers.fintech_controller", "fintech_bp"),
         ("controllers.health_controller", "api_bp"),
+        ("controllers.database_controller", "database_bp"),
     ]
 
     for module_path, bp_name in blueprints:

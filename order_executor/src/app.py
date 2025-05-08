@@ -1,5 +1,7 @@
 import json
+import traceback
 import time
+import uuid
 from datetime import datetime
 import socket
 import os
@@ -13,6 +15,7 @@ from concurrent import futures
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import List, Optional, Dict, Any
+from order_executor_integration import OrderExecutorService
 
 DEFAULT_HEARTBEAT_INTERVAL = 0.5  # seconds
 MIN_ELECTION_TIMEOUT = 1.5  # seconds
@@ -20,6 +23,7 @@ MAX_ELECTION_TIMEOUT = 3.0  # seconds
 DEFAULT_PORT = 50051
 DEFAULT_MAX_WORKERS = 10  # Increased from 1
 JOB_PROCESSING_INTERVAL = 2.0  # seconds
+MAX_JOBS_PARALLEL = 5
 
 # proto
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -560,11 +564,11 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
     def _send_heartbeat_to_peer(self, peer, term, leader_id):
         """Send a heartbeat to a specific peer."""
         try:
-            # Create a request with minimal data - just for heartbeat
+            # heartbeat
             request = raft_pb2.AppendEntriesArgs(
                 term=term,
                 leader_id=leader_id,
-                prev_log_index=-1,  # For heartbeat, these values don't matter
+                prev_log_index=-1,  # For heartbeat
                 prev_log_term=0,
                 entries=[],
                 leader_commit=0,
@@ -572,7 +576,7 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
 
             with grpc.insecure_channel(peer) as channel:
                 stub = raft_pb2_grpc.RaftStub(channel)
-                # Set a shorter timeout for heartbeats
+                # timeout for heartbeat
                 response = stub.AppendEntries(request, timeout=0.3)
 
                 # Handle higher term
@@ -684,10 +688,10 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
         if self._shutdown_event.is_set() or self.get_node_state() != NodeState.LEADER:
             return
 
-        # Process any pending jobs
+        # process pending jobs
         self._process_jobs()
 
-        # Schedule next job processing
+        # schedule next job processing
         if not self._shutdown_event.is_set():
             self._job_processor_timer = threading.Timer(
                 JOB_PROCESSING_INTERVAL, self._start_job_processor
@@ -700,19 +704,28 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
         if self.get_node_state() != NodeState.LEADER:
             return
 
-        # Process up to 5 jobs at a time
+        # 5  jobs at a time
         jobs_processed = 0
-        while not self.job_queue.is_empty() and jobs_processed < 5:
+        while not self.job_queue.is_empty() and jobs_processed < MAX_JOBS_PARALLEL:
             job = self.job_queue.dequeue()
             if job:
                 try:
-                    # received job
-                    print(f"Processing job: {job.command}")
+                    order_executor = OrderExecutorService.get_instance()
 
-                    # job processing
-                    print(
-                        f"Job priority: {job.priority}, Command: {json.dumps(job.command)}"
-                    )
+                    # order execution
+                    job_id = job.command.get("order_id", str(uuid.uuid4()))
+                    payload = job.command
+
+                    print(f"Processing job: {job_id}")
+                    result = order_executor.execute_order(job_id, payload)
+
+                    # Log the result
+                    if result.get("success", False):
+                        print(f"Job {job_id} executed successfully")
+                    else:
+                        print(
+                            f"Job {job_id} execution failed: {result.get('error', 'Unknown error')}"
+                        )
 
                     jobs_processed += 1
                 except Exception as e:
@@ -844,14 +857,14 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
     def _calculate_priority(self, order: Dict[str, Any]) -> float:
         """Calculate priority score based on order attributes."""
         # Higher quantity = higher priority
-        quantity_weight = order["quantity"] * 0.4
+        quantity_weight = order["amount"] * 0.4
 
         # Higher value = higher priority
-        price_weight = order["total_price"] * 0.4
+        price_weight = order["price"] * 0.4
 
         # Older orders = higher priority (negative time decay)
         time_elapsed = (
-            datetime.now() - datetime.fromisoformat(order["timestamp"])
+            datetime.now() - datetime.fromisoformat(order["order_date"])
         ).seconds
         time_weight = -time_elapsed * 0.2
 
@@ -910,6 +923,8 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
             return raft_pb2.JobResponse(success=True, leader_id=self.node_id)
 
         except Exception as e:
+            traceback.print_exc()
+
             print(f"Error submitting job: {e}")
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             context.set_details(str(e))

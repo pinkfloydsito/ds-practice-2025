@@ -6,6 +6,8 @@ package db_node;
 service Database {
   // Read a value for a key from any node
   rpc Read (ReadRequest) returns (ReadResponse) {}
+
+  rpc ReadAll (ReadAllRequest) returns (ReadAllResponse) {}
   
   // Write a value for a key - only primary node accepts
   rpc Write (WriteRequest) returns (WriteResponse) {}
@@ -25,9 +27,26 @@ service Database {
   rpc RequestVote (VoteRequest) returns (VoteResponse) {}
 }
 
+message KeyValuePair {
+  string key = 1;
+  string value = 2;
+  int32 version = 3;
+  WriteRequest.ValueType type = 4;  // Type of the value
+}
+
 // Request to read a key
 message ReadRequest {
   string key = 1;
+}
+
+message ReadAllRequest {
+}
+
+message ReadAllResponse {
+  bool success = 1;
+  string message = 2;
+  repeated KeyValuePair items = 3;
+  int32 total_returned = 4;
 }
 
 // Response with the value for a key

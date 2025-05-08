@@ -6,13 +6,16 @@ x-raft-node-template: &raft-node-template
       dockerfile: ./order_executor/Dockerfile
   restart: unless-stopped
   networks:
-    - boostore-network
+    - bookstore-network
   healthcheck:
     test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 50051)); s.close()"]
     interval: 5s
     timeout: 3s
     retries: 3
   environment:
+    - PYTHONUNBUFFERED=TRUE
+    - DB_NODES=db-node1:50052,db-node2:50052,db-node3:50052
+    - PAYMENT_SERVICE=payment-service:50053
     - AUTO_DISCOVER=true
     - WAIT_FOR_NODES=false
     - NODE_COUNT=5
@@ -33,7 +36,7 @@ services:
       # Mount the frontend directory
       - ./frontend/src:/usr/share/nginx/html
     networks:
-      - boostore-network
+      - bookstore-network
   orchestrator:
     env_file:
       - .env
@@ -45,7 +48,7 @@ services:
       dockerfile: ./orchestrator/Dockerfile
 
     networks:
-      - boostore-network
+      - bookstore-network
     ports:
       # Expose port 8081 on the host, and map port 5000 of the container to port 8081 on the host
       - 8081:5000
@@ -56,6 +59,7 @@ services:
       # The PYTHONFILE environment variable specifies the absolute entry point of the application
       # Check app.py in the orchestrator directory to see how this is used
       - PYTHONFILE=/app/orchestrator/src/app.py
+      - DB_NODES=db-node1:50052,db-node2:50052,db-node3:50052
     volumes:
       # Mount the utils directory in the current directory to the /app/utils directory in the container
       - ./utils:/app/utils
@@ -72,7 +76,7 @@ services:
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./fraud_detection/Dockerfile
     networks:
-      - boostore-network
+      - bookstore-network
     ports:
       # Expose port 50051 on the host, and map port 50051 of the container to port 50051 on the host
       - 50051:50051
@@ -97,7 +101,7 @@ services:
     ports:
       - 50053:50053
     networks:
-      - boostore-network
+      - bookstore-network
     environment:
       # Pass the environment variables to the container
       # The PYTHONUNBUFFERED environment variable ensures that the output from the application is logged to the console
@@ -117,7 +121,7 @@ services:
     image: bookstore_postgres
     container_name: bookstore_postgres
     networks:
-      - boostore-network
+      - bookstore-network
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./db/init-extensions.sql:/docker-entrypoint-initdb.d/init-extensions.sql
@@ -137,7 +141,7 @@ services:
       # Use the Dockerfile in the fraud_detection directorys
       dockerfile: ./transaction_verification/Dockerfile
     networks:
-      - boostore-network
+      - bookstore-network
     ports:
       # Expose port 50052 on the host, and map port 50052 of the container to port 50051 on the host
       - 50052:50052
@@ -159,6 +163,7 @@ services:
     container_name: raft-node1
     hostname: raft-node1
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
       - NODE_ID=node1
       - AUTO_DISCOVER=false
@@ -175,6 +180,7 @@ services:
     container_name: raft-node2
     hostname: raft-node2
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
       - NODE_ID=node2
       - AUTO_DISCOVER=true
@@ -193,6 +199,7 @@ services:
     container_name: raft-node3
     hostname: raft-node3  
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
       - NODE_ID=node3
       - AUTO_DISCOVER=true
@@ -211,6 +218,7 @@ services:
     container_name: raft-node4
     hostname: raft-node4
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
       - NODE_ID=node4
       - AUTO_DISCOVER=true
@@ -229,6 +237,7 @@ services:
     container_name: raft-node5
     hostname: raft-node5
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - PEERS=raft-node1:50051,raft-node2:50051,raft-node3:50051,raft-node4:50051,raft-node5:50051
       - NODE_ID=node5
       - AUTO_DISCOVER=true
@@ -245,8 +254,9 @@ services:
   db-node1:
     build:
       context: .
-      dockerfile: Dockerfile.database
+      dockerfile: ./db_node/Dockerfile
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - DB_NODE_ID=db-node1
       - DB_PORT=50052
       - DB_ROLE=REPLICA  # Start as replica, leader will be elected
@@ -262,13 +272,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    volumes:
+      - ./utils:/app/utils
+      - ./db_node/src:/app/db_node/src
 
   # Second database node
   db-node2:
     build:
       context: .
-      dockerfile: Dockerfile.database
+      dockerfile: ./db_node/Dockerfile
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - DB_NODE_ID=db-node2
       - DB_PORT=50052
       - DB_ROLE=REPLICA  # Start as replica, leader will be elected
@@ -280,13 +294,17 @@ services:
       - bookstore-network
     depends_on:
       - db-node1
+    volumes:
+      - ./utils:/app/utils
+      - ./db_node/src:/app/db_node/src
 
   # Third database node
   db-node3:
     build:
       context: .
-      dockerfile: Dockerfile.database
+      dockerfile: ./db_node/Dockerfile
     environment:
+      - PYTHONUNBUFFERED=TRUE
       - DB_NODE_ID=db-node3
       - DB_PORT=50052
       - DB_ROLE=REPLICA  # Start as replica, leader will be elected
@@ -298,7 +316,46 @@ services:
       - bookstore-network
     depends_on:
       - db-node1
+    volumes:
+      - ./utils:/app/utils
+      - ./db_node/src:/app/db_node/src
+
+  payment-service:
+    build:
+      context: ./
+      dockerfile: ./payment/Dockerfile
+    container_name: payment-service
+    hostname: payment-service
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - PAYMENT_PORT=50053
+      - PYTHONFILE=/app/payment/src/app.py
+    networks:
+      - bookstore-network
+    volumes:
+      - ./utils:/app/utils
+      - ./payment/src:/app/payment/src
+
+  db-initializer:
+    build:
+      context: ./
+      dockerfile: ./order_executor/Dockerfile
+    command: python order_executor/src/init_database.py
+    depends_on:
+      - db-node1
+      - db-node2
+      - db-node3
+    networks:
+      - bookstore-network
+    environment:
+      - PYTHONUNBUFFERED=TRUE
+      - DB_NODES=db-node1:50052,db-node2:50052,db-node3:50052
+    volumes:
+      - ./utils:/app/utils
+      - ./order_executor/src:/app/order_executor/src
+    restart: "no"
 
 networks:
-  boostore-network:
+  bookstore-network:
     driver: bridge
+    attachable: true 

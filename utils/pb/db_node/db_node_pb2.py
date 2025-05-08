@@ -24,39 +24,49 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rdb_node.proto\x12\x07\x64\x62_node\"\x1a\n\x0bReadRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\"P\n\x0cReadResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05value\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\x05\x12\x0f\n\x07message\x18\x04 \x01(\t\"\x90\x01\n\x0cWriteRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\x12-\n\x04type\x18\x03 \x01(\x0e\x32\x1f.db_node.WriteRequest.ValueType\"5\n\tValueType\x12\n\n\x06STRING\x10\x00\x12\x07\n\x03INT\x10\x01\x12\t\n\x05\x46LOAT\x10\x02\x12\x08\n\x04JSON\x10\x03\"V\n\rWriteResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\x05\x12\x12\n\nprimary_id\x18\x04 \x01(\t\"/\n\x10\x44\x65\x63rementRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x02\"\x84\x01\n\x11\x44\x65\x63rementResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x11\n\tnew_value\x18\x02 \x01(\x02\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x15\n\rcurrent_value\x18\x04 \x01(\x02\x12\x0f\n\x07version\x18\x05 \x01(\x05\x12\x12\n\nprimary_id\x18\x06 \x01(\t\"Y\n\x10HeartbeatRequest\x12\x12\n\nprimary_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x05\x12\x0f\n\x07updates\x18\x03 \x03(\t\x12\x12\n\nlast_index\x18\x04 \x01(\x05\"C\n\x11HeartbeatResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0c\n\x04term\x18\x03 \x01(\x05\"I\n\x0bVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\x12\x16\n\x0elast_log_index\x18\x03 \x01(\x05\"2\n\x0cVoteResponse\x12\x14\n\x0cvote_granted\x18\x01 \x01(\x08\x12\x0c\n\x04term\x18\x02 \x01(\x05\"\x0f\n\rStatusRequest\"g\n\x0eStatusResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x0c\n\x04role\x18\x02 \x01(\t\x12\x12\n\nprimary_id\x18\x03 \x01(\t\x12\x14\n\x0crecord_count\x18\x04 \x01(\x05\x12\x0c\n\x04term\x18\x05 \x01(\x05\x32\x8a\x03\n\x08\x44\x61tabase\x12\x35\n\x04Read\x12\x14.db_node.ReadRequest\x1a\x15.db_node.ReadResponse\"\x00\x12\x38\n\x05Write\x12\x15.db_node.WriteRequest\x1a\x16.db_node.WriteResponse\"\x00\x12I\n\x0e\x44\x65\x63rementStock\x12\x19.db_node.DecrementRequest\x1a\x1a.db_node.DecrementResponse\"\x00\x12\x44\n\tHeartbeat\x12\x19.db_node.HeartbeatRequest\x1a\x1a.db_node.HeartbeatResponse\"\x00\x12>\n\tGetStatus\x12\x16.db_node.StatusRequest\x1a\x17.db_node.StatusResponse\"\x00\x12<\n\x0bRequestVote\x12\x14.db_node.VoteRequest\x1a\x15.db_node.VoteResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rdb_node.proto\x12\x07\x64\x62_node\"j\n\x0cKeyValuePair\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\x05\x12-\n\x04type\x18\x04 \x01(\x0e\x32\x1f.db_node.WriteRequest.ValueType\"\x1a\n\x0bReadRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\"\x10\n\x0eReadAllRequest\"q\n\x0fReadAllResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12$\n\x05items\x18\x03 \x03(\x0b\x32\x15.db_node.KeyValuePair\x12\x16\n\x0etotal_returned\x18\x04 \x01(\x05\"P\n\x0cReadResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\r\n\x05value\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\x05\x12\x0f\n\x07message\x18\x04 \x01(\t\"\x90\x01\n\x0cWriteRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t\x12-\n\x04type\x18\x03 \x01(\x0e\x32\x1f.db_node.WriteRequest.ValueType\"5\n\tValueType\x12\n\n\x06STRING\x10\x00\x12\x07\n\x03INT\x10\x01\x12\t\n\x05\x46LOAT\x10\x02\x12\x08\n\x04JSON\x10\x03\"V\n\rWriteResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0f\n\x07version\x18\x03 \x01(\x05\x12\x12\n\nprimary_id\x18\x04 \x01(\t\"/\n\x10\x44\x65\x63rementRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x02\"/\n\x10IncrementRequest\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x02\"\x84\x01\n\x11\x44\x65\x63rementResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x11\n\tnew_value\x18\x02 \x01(\x02\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x15\n\rcurrent_value\x18\x04 \x01(\x02\x12\x0f\n\x07version\x18\x05 \x01(\x05\x12\x12\n\nprimary_id\x18\x06 \x01(\t\"\x84\x01\n\x11IncrementResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x11\n\tnew_value\x18\x02 \x01(\x02\x12\x0f\n\x07message\x18\x03 \x01(\t\x12\x15\n\rcurrent_value\x18\x04 \x01(\x02\x12\x0f\n\x07version\x18\x05 \x01(\x05\x12\x12\n\nprimary_id\x18\x06 \x01(\t\"Y\n\x10HeartbeatRequest\x12\x12\n\nprimary_id\x18\x01 \x01(\t\x12\x0c\n\x04term\x18\x02 \x01(\x05\x12\x0f\n\x07updates\x18\x03 \x03(\t\x12\x12\n\nlast_index\x18\x04 \x01(\x05\"C\n\x11HeartbeatResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x0c\n\x04term\x18\x03 \x01(\x05\"I\n\x0bVoteRequest\x12\x0c\n\x04term\x18\x01 \x01(\x05\x12\x14\n\x0c\x63\x61ndidate_id\x18\x02 \x01(\t\x12\x16\n\x0elast_log_index\x18\x03 \x01(\x05\"2\n\x0cVoteResponse\x12\x14\n\x0cvote_granted\x18\x01 \x01(\x08\x12\x0c\n\x04term\x18\x02 \x01(\x05\"\x0f\n\rStatusRequest\"g\n\x0eStatusResponse\x12\x0f\n\x07node_id\x18\x01 \x01(\t\x12\x0c\n\x04role\x18\x02 \x01(\t\x12\x12\n\nprimary_id\x18\x03 \x01(\t\x12\x14\n\x0crecord_count\x18\x04 \x01(\x05\x12\x0c\n\x04term\x18\x05 \x01(\x05\x32\x95\x04\n\x08\x44\x61tabase\x12\x35\n\x04Read\x12\x14.db_node.ReadRequest\x1a\x15.db_node.ReadResponse\"\x00\x12>\n\x07ReadAll\x12\x17.db_node.ReadAllRequest\x1a\x18.db_node.ReadAllResponse\"\x00\x12\x38\n\x05Write\x12\x15.db_node.WriteRequest\x1a\x16.db_node.WriteResponse\"\x00\x12I\n\x0e\x44\x65\x63rementStock\x12\x19.db_node.DecrementRequest\x1a\x1a.db_node.DecrementResponse\"\x00\x12I\n\x0eIncrementStock\x12\x19.db_node.IncrementRequest\x1a\x1a.db_node.IncrementResponse\"\x00\x12\x44\n\tHeartbeat\x12\x19.db_node.HeartbeatRequest\x1a\x1a.db_node.HeartbeatResponse\"\x00\x12>\n\tGetStatus\x12\x16.db_node.StatusRequest\x1a\x17.db_node.StatusResponse\"\x00\x12<\n\x0bRequestVote\x12\x14.db_node.VoteRequest\x1a\x15.db_node.VoteResponse\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'db_node_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_READREQUEST']._serialized_start=26
-  _globals['_READREQUEST']._serialized_end=52
-  _globals['_READRESPONSE']._serialized_start=54
-  _globals['_READRESPONSE']._serialized_end=134
-  _globals['_WRITEREQUEST']._serialized_start=137
-  _globals['_WRITEREQUEST']._serialized_end=281
-  _globals['_WRITEREQUEST_VALUETYPE']._serialized_start=228
-  _globals['_WRITEREQUEST_VALUETYPE']._serialized_end=281
-  _globals['_WRITERESPONSE']._serialized_start=283
-  _globals['_WRITERESPONSE']._serialized_end=369
-  _globals['_DECREMENTREQUEST']._serialized_start=371
-  _globals['_DECREMENTREQUEST']._serialized_end=418
-  _globals['_DECREMENTRESPONSE']._serialized_start=421
-  _globals['_DECREMENTRESPONSE']._serialized_end=553
-  _globals['_HEARTBEATREQUEST']._serialized_start=555
-  _globals['_HEARTBEATREQUEST']._serialized_end=644
-  _globals['_HEARTBEATRESPONSE']._serialized_start=646
-  _globals['_HEARTBEATRESPONSE']._serialized_end=713
-  _globals['_VOTEREQUEST']._serialized_start=715
-  _globals['_VOTEREQUEST']._serialized_end=788
-  _globals['_VOTERESPONSE']._serialized_start=790
-  _globals['_VOTERESPONSE']._serialized_end=840
-  _globals['_STATUSREQUEST']._serialized_start=842
-  _globals['_STATUSREQUEST']._serialized_end=857
-  _globals['_STATUSRESPONSE']._serialized_start=859
-  _globals['_STATUSRESPONSE']._serialized_end=962
-  _globals['_DATABASE']._serialized_start=965
-  _globals['_DATABASE']._serialized_end=1359
+  _globals['_KEYVALUEPAIR']._serialized_start=26
+  _globals['_KEYVALUEPAIR']._serialized_end=132
+  _globals['_READREQUEST']._serialized_start=134
+  _globals['_READREQUEST']._serialized_end=160
+  _globals['_READALLREQUEST']._serialized_start=162
+  _globals['_READALLREQUEST']._serialized_end=178
+  _globals['_READALLRESPONSE']._serialized_start=180
+  _globals['_READALLRESPONSE']._serialized_end=293
+  _globals['_READRESPONSE']._serialized_start=295
+  _globals['_READRESPONSE']._serialized_end=375
+  _globals['_WRITEREQUEST']._serialized_start=378
+  _globals['_WRITEREQUEST']._serialized_end=522
+  _globals['_WRITEREQUEST_VALUETYPE']._serialized_start=469
+  _globals['_WRITEREQUEST_VALUETYPE']._serialized_end=522
+  _globals['_WRITERESPONSE']._serialized_start=524
+  _globals['_WRITERESPONSE']._serialized_end=610
+  _globals['_DECREMENTREQUEST']._serialized_start=612
+  _globals['_DECREMENTREQUEST']._serialized_end=659
+  _globals['_INCREMENTREQUEST']._serialized_start=661
+  _globals['_INCREMENTREQUEST']._serialized_end=708
+  _globals['_DECREMENTRESPONSE']._serialized_start=711
+  _globals['_DECREMENTRESPONSE']._serialized_end=843
+  _globals['_INCREMENTRESPONSE']._serialized_start=846
+  _globals['_INCREMENTRESPONSE']._serialized_end=978
+  _globals['_HEARTBEATREQUEST']._serialized_start=980
+  _globals['_HEARTBEATREQUEST']._serialized_end=1069
+  _globals['_HEARTBEATRESPONSE']._serialized_start=1071
+  _globals['_HEARTBEATRESPONSE']._serialized_end=1138
+  _globals['_VOTEREQUEST']._serialized_start=1140
+  _globals['_VOTEREQUEST']._serialized_end=1213
+  _globals['_VOTERESPONSE']._serialized_start=1215
+  _globals['_VOTERESPONSE']._serialized_end=1265
+  _globals['_STATUSREQUEST']._serialized_start=1267
+  _globals['_STATUSREQUEST']._serialized_end=1282
+  _globals['_STATUSRESPONSE']._serialized_start=1284
+  _globals['_STATUSRESPONSE']._serialized_end=1387
+  _globals['_DATABASE']._serialized_start=1390
+  _globals['_DATABASE']._serialized_end=1923
 # @@protoc_insertion_point(module_scope)
