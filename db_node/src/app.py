@@ -606,9 +606,9 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
         Returns:
             WriteResponse with success status
         """
-        # Check if this node is primary
+        # is node primary?
         if self.get_role() != NodeRole.PRIMARY:
-            # Redirect to primary
+            # redirect
             primary_id, primary_address = self.get_primary_info()
             if primary_address:
                 return db_node_pb2.WriteResponse(
@@ -635,7 +635,7 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
             elif request.type == db_node_pb2.WriteRequest.ValueType.FLOAT:
                 value_obj = float(value)
             elif request.type == db_node_pb2.WriteRequest.ValueType.JSON:
-                value_obj = json.loads(value)
+                value_obj = str(value)
 
             with self._data_lock:
                 # Update version
@@ -738,6 +738,58 @@ class DatabaseNode(db_node_pb2_grpc.DatabaseServicer):
             except Exception as e:
                 return db_node_pb2.DecrementResponse(
                     success=False, message=f"Error decrementing value: {str(e)}"
+                )
+
+    def IncrementStock(self, request, context):
+        """Atomic increment operation for stock."""
+        if self.get_role() != NodeRole.PRIMARY:
+            return db_node_pb2.IncrementResponse(
+                success=False, message=f"Not the primary node"
+            )
+
+        key = request.key
+        amount = request.amount
+
+        with self._data_lock:
+            if key not in self.data_store:
+                return db_node_pb2.IncrementResponse(
+                    success=False, message=f"Key '{key}' not found"
+                )
+
+            try:
+                current_value = self.data_store[key]
+                if not isinstance(current_value, (int, float)):
+                    return db_node_pb2.IncrementResponse(
+                        success=False, message=f"Value for key '{key}' is not a number"
+                    )
+
+                # Increment value
+                new_value = current_value + amount
+
+                # Update version
+                current_version = self.versions.get(key, 0)
+                new_version = current_version + 1
+
+                # Update data store
+                self.data_store[key] = new_value
+                self.versions[key] = new_version
+
+                operation = {
+                    "key": key,
+                    "value": new_value,
+                    "version": new_version,
+                    "timestamp": datetime.now().isoformat(),
+                    "operation": "INCREMENT",
+                }
+                self.operation_log.append(operation)
+
+                return db_node_pb2.IncrementResponse(
+                    success=True, new_value=new_value, version=new_version
+                )
+
+            except Exception as e:
+                return db_node_pb2.IncrementResponse(
+                    success=False, message=f"Error incrementing value: {str(e)}"
                 )
 
     def GetStatus(self, request, context):

@@ -17,7 +17,7 @@ def initialize_database():
     print(f"Initializing database with nodes: {db_nodes}")
 
     # Wait for database to be up
-    time.sleep(5)
+    time.sleep(10)
 
     # Create database client
     client = DatabaseClient(db_nodes)
@@ -29,6 +29,7 @@ def initialize_database():
         "Book C": 50,
         "Book D": 25,
         "Book E": 10,
+        "Book F": 1,
         "Harry Potter": 200,
         "The Great Gatsby": 150,
         "To Kill a Mockingbird": 120,

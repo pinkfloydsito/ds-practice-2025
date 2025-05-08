@@ -140,3 +140,25 @@ class DatabaseService:
                 )
 
         return statuses
+
+    def read_key(self, key: str) -> Tuple[bool, Optional[str], int, Optional[str]]:
+        """Read any key from the database."""
+        # Try reading from nodes using round-robin
+        for attempt in range(len(self.db_nodes)):
+            node_index = (self._current_node_index + attempt) % len(self.db_nodes)
+            node = self.db_nodes[node_index]
+
+            try:
+                with grpc.insecure_channel(node) as channel:
+                    stub = db_node_pb2_grpc.DatabaseStub(channel)
+                    response = stub.Read(
+                        db_node_pb2.ReadRequest(key=key), timeout=self.timeout
+                    )
+
+                    if response.success:
+                        self._current_node_index = (node_index + 1) % len(self.db_nodes)
+                        return True, response.value, response.version, None
+            except grpc.RpcError:
+                continue
+
+        return False, None, 0, f"Key '{key}' not found in any database node"

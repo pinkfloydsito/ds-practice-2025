@@ -1,15 +1,8 @@
 import os
 import json
-import logging
 from typing import Dict, Any, Optional, Tuple
 
 from two_phase_commit import TwoPhaseCommitCoordinator
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 class OrderProcessor:
@@ -29,7 +22,7 @@ class OrderProcessor:
         # Initialize 2PC coordinator
         self.coordinator = TwoPhaseCommitCoordinator(db_nodes, payment_service)
 
-        logger.info(
+        print(
             f"Order processor initialized with DB nodes: {db_nodes}, payment service: {payment_service}"
         )
 
@@ -46,7 +39,7 @@ class OrderProcessor:
             Tuple of (success, error_message, result)
         """
         job_id = job_data.get("job_id", "unknown")
-        logger.info(f"Processing job {job_id}")
+        print(f"Processing job {job_id}")
 
         try:
             # Extract order information
@@ -56,13 +49,13 @@ class OrderProcessor:
                     order_payload = json.loads(order_payload)
                 except json.JSONDecodeError:
                     error_msg = "Invalid order payload: not a valid JSON"
-                    logger.error(f"{error_msg} for job {job_id}")
+                    print(f"{error_msg} for job {job_id}")
                     return False, error_msg, {"status": "FAILED"}
 
             # Validate order
             if not self._validate_order(order_payload):
                 error_msg = "Invalid order: missing required fields"
-                logger.error(f"{error_msg} for job {job_id}")
+                print(f"{error_msg} for job {job_id}")
                 return False, error_msg, {"status": "FAILED"}
 
             # Ensure order has an ID
@@ -73,15 +66,15 @@ class OrderProcessor:
             success, error, result = self.coordinator.execute_order(order_payload)
 
             if not success:
-                logger.error(f"Order execution failed: {error}")
+                print(f"Order execution failed: {error}")
                 return False, error, {"status": "FAILED", "reason": error}
 
-            logger.info(f"Order {job_id} processed successfully")
+            print(f"Order {job_id} processed successfully")
             return True, None, result
 
         except Exception as e:
             error_msg = f"Error processing job {job_id}: {str(e)}"
-            logger.exception(error_msg)
+            print(error_msg)
             return False, error_msg, {"status": "ERROR"}
 
     def _validate_order(self, order: Dict[str, Any]) -> bool:

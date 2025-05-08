@@ -147,11 +147,16 @@ def checkout_v2():
 
         result = raft_service.submit_job(order_id, order_data)
         success = result.success
-        print(result)
         if not success:
             return jsonify(result), 400
 
-        return jsonify(OrderStatusResponseSchema().dump(result))
+        # we need this order_id later for the polling
+        response_data = {
+            "orderId": order_id,
+            "status": "PENDING",
+        }
+
+        return jsonify(OrderStatusResponseSchema().dump(response_data))
 
     except Exception as e:
         print(f"Unexpected error: {e}")

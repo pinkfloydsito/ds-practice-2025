@@ -75,6 +75,7 @@ def register_blueprints(app):
         ("controllers.fintech_controller", "fintech_bp"),
         ("controllers.health_controller", "api_bp"),
         ("controllers.database_controller", "database_bp"),
+        ("controllers.order_controller", "order_bp"),
     ]
 
     for module_path, bp_name in blueprints:

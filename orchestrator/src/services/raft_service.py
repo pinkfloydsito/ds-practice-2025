@@ -51,6 +51,7 @@ class RaftService:
                 return self.submit_job(order_id, payload)
 
             result.success = response.success
+
             return result
         except grpc.RpcError as e:
             print(f"gRPC error in submit_job: {e.code()}: {e.details()}")

@@ -21,8 +21,8 @@ DEFAULT_HEARTBEAT_INTERVAL = 0.5  # seconds
 MIN_ELECTION_TIMEOUT = 1.5  # seconds
 MAX_ELECTION_TIMEOUT = 3.0  # seconds
 DEFAULT_PORT = 50051
-DEFAULT_MAX_WORKERS = 10  # Increased from 1
-JOB_PROCESSING_INTERVAL = 2.0  # seconds
+DEFAULT_MAX_WORKERS = 10
+JOB_PROCESSING_INTERVAL = 2.0
 MAX_JOBS_PARALLEL = 5
 
 # proto
@@ -884,6 +884,7 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
         try:
             # Parse the payload
             order = json.loads(request.payload)
+            order["order_id"] = request.job_id
 
             # Use provided priority or calculate if not provided
             priority = (

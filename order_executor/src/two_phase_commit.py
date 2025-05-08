@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -5,9 +6,8 @@ import uuid
 import grpc
 import traceback
 import threading
-from typing import Dict, List, Any, Optional, Tuple, Callable
+from typing import Dict, List, Any, Optional, Tuple
 
-# Add protocol buffer paths
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 DB_PROTO_DIR = os.path.abspath(os.path.join(FILE, "../../../utils/pb/db_node"))
 PAYMENT_PROTO_DIR = os.path.abspath(
@@ -50,7 +50,7 @@ class TwoPhaseCommitCoordinator:
         self._transaction_lock = threading.RLock()
 
         # Timeouts and retries
-        self.timeout = 5  # seconds
+        self.timeout = 5
         self.max_retries = 3
 
         # Track primary database node
@@ -108,16 +108,30 @@ class TwoPhaseCommitCoordinator:
         print(f"Starting transaction {transaction_id} for order execution")
 
         # Initialize transaction record
+        order_id = order_data.get("order_id", "unknown")
+
         with self._transaction_lock:
             self.transactions[transaction_id] = {
                 "id": transaction_id,
                 "status": "STARTED",
+                "order_id": order_id,
                 "order_data": order_data,
                 "start_time": time.time(),
                 "participants": ["database", "payment"],
                 "phase1_results": {},
                 "phase2_results": {},
             }
+            success, error = self._create_order_in_db(
+                transaction_id, order_data, "PROCESSING"
+            )
+
+            if not success:
+                self._global_abort(transaction_id, error)
+                return (
+                    False,
+                    error,
+                    {"transaction_id": transaction_id, "status": "FAILED"},
+                )
 
         try:
             # Phase 1: Prepare
@@ -444,16 +458,123 @@ class TwoPhaseCommitCoordinator:
         )
 
         if not payment_commit_success:
-            # In a real system, we would need to handle compensating transactions
-            # (e.g., restore stock levels), but for simplicity we'll just report the error
-            return False, f"Payment commit failed: {payment_error}", {}
+            compensation_success = self._compensate_database_commit(
+                transaction_id, db_result
+            )
+
+            if compensation_success:
+                return False, f"Payment failed, stock restored: {payment_error}", {}
+            else:
+                return (
+                    False,
+                    f"CRITICAL: Payment failed and stock restoration failed: {payment_error}",
+                    {},
+                )
 
         result["commit_results"]["payment"] = payment_result
+        if db_commit_success and payment_commit_success:
+            # Update order status to COMPLETED
+            order_id = order_data.get("order_id", transaction_id)
+            self._update_order_status(order_id, "COMPLETED", payment_result)
 
         # All commits succeeded
         result["status"] = "COMPLETED"
 
         return True, None, result
+
+    def _compensate_database_commit(
+        self, transaction_id: str, db_commit_result: Dict[str, Any]
+    ) -> bool:
+        """Compensate for database changes by restoring stock."""
+        try:
+            primary_node = self._get_primary_db_node()
+            if not primary_node:
+                return False
+
+            with grpc.insecure_channel(primary_node) as channel:
+                stub = db_node_pb2_grpc.DatabaseStub(channel)
+
+                # Now this will work because we're returning updated_stock
+                updated_stock = db_commit_result.get("updated_stock", {})
+
+                for book_name, stock_info in updated_stock.items():
+                    stock_key = stock_info["key"]
+                    quantity_decremented = stock_info["amount"]
+
+                    # Restore stock by incrementing back
+                    response = stub.IncrementStock(
+                        db_node_pb2.IncrementRequest(
+                            key=stock_key, amount=quantity_decremented
+                        ),
+                        timeout=self.timeout,
+                    )
+
+                    if not response.success:
+                        print(f"Failed to restore stock for {book_name}")
+                        return False
+
+                # Update order status to FAILED
+                with self._transaction_lock:
+                    order_data = self.transactions[transaction_id]["order_data"]
+                    order_id = order_data.get("order_id", transaction_id)
+
+                self._update_order_status(
+                    order_id, "FAILED", {"reason": "Payment failed"}
+                )
+
+                return True
+
+        except Exception as e:
+            print(f"Error during compensation: {str(e)}")
+            return False
+
+    def _update_order_status(
+        self, order_id: str, status: str, info: Dict[str, Any] = None
+    ):
+        """Update order status in database."""
+        primary_node = self._get_primary_db_node()
+
+        try:
+            with grpc.insecure_channel(primary_node) as channel:
+                stub = db_node_pb2_grpc.DatabaseStub(channel)
+
+                # Read current order data
+                order_key = f"order:{order_id}"
+                read_response = stub.Read(
+                    db_node_pb2.ReadRequest(key=order_key), timeout=self.timeout
+                )
+
+                print("debug", read_response)
+
+                if read_response.success:
+                    order_data = json.loads(read_response.value)
+
+                    # Update status
+                    order_data["status"] = status
+                    order_data["updated_at"] = time.time()
+
+                    if info.get("payment_id") is not None:
+                        order_data["payment"] = {
+                            "payment_id": info.get("payment_id"),
+                            "confirmation_code": info.get("confirmation_code"),
+                            "processed_at": info.get("timestamp"),
+                        }
+                    elif info.get("reason") is not None:
+                        order_data["reason"] = info.get("reason")
+
+                    # Write back
+                    write_response = stub.Write(
+                        db_node_pb2.WriteRequest(
+                            key=order_key,
+                            value=json.dumps(order_data),
+                            type=db_node_pb2.WriteRequest.ValueType.JSON,
+                        ),
+                        timeout=self.timeout,
+                    )
+
+                    return write_response.success
+        except grpc.RpcError:
+            return False
 
     def _commit_database(
         self, transaction_id: str, prepare_data: Dict[str, Any]
@@ -479,9 +600,45 @@ class TwoPhaseCommitCoordinator:
             return False, "No primary database node available", {}
 
         # Commit results
-        commit_results = {}
+        commit_results = {"updated_stock": {}}
 
         try:
+            with grpc.insecure_channel(primary_node) as channel:
+                stub = db_node_pb2_grpc.DatabaseStub(channel)
+
+                for book_name, check_data in stock_checks.items():
+                    # Get stock information
+                    stock_key = check_data["key"]
+                    quantity = check_data["amount"]
+
+                    # Decrement stock
+                    response = stub.DecrementStock(
+                        db_node_pb2.DecrementRequest(key=stock_key, amount=quantity),
+                        timeout=self.timeout,
+                    )
+
+                    if not response.success:
+                        # Handle failure - in a real system, we would need to
+                        # restore any other stock decrements we already made
+                        return (
+                            False,
+                            f"Failed to decrement stock for {book_name}: {response.message}",
+                            {},
+                        )
+
+                    # Record what we changed for potential rollback
+                    commit_results["updated_stock"][book_name] = {
+                        "new_stock": response.new_value,
+                        "old_stock": check_data["current_stock"],  # From prepare phase
+                        "amount": quantity,
+                        "version": response.version,
+                        "key": stock_key,
+                    }
+
+            with self._transaction_lock:
+                order_data = self.transactions[transaction_id]["order_data"]
+                order_id = order_data.get("order_id", transaction_id)
+
             with grpc.insecure_channel(primary_node) as channel:
                 stub = db_node_pb2_grpc.DatabaseStub(channel)
 
@@ -512,22 +669,43 @@ class TwoPhaseCommitCoordinator:
                         "version": response.version,
                     }
 
-            # Record commit results
-            with self._transaction_lock:
-                if transaction_id in self.transactions:
-                    if "phase2_results" not in self.transactions[transaction_id]:
-                        self.transactions[transaction_id]["phase2_results"] = {}
+                # store order status
+                order_key = f"order:{order_id}"
+                order_value = {
+                    "order_id": order_id,
+                    "status": "PROCESSING",
+                    "items": order_data.get("book_tokens", []),
+                    "amount": order_data.get("amount", 0),
+                    "customer": order_data.get("user", {}).get("name", "unknown"),
+                    "timestamp": time.time(),
+                    "transaction_id": transaction_id,
+                }
 
-                    self.transactions[transaction_id]["phase2_results"]["database"] = {
-                        "success": True,
-                        "commit_results": commit_results,
-                    }
+                response = stub.Write(
+                    db_node_pb2.WriteRequest(
+                        key=order_key,
+                        value=json.dumps(order_value),
+                        type=db_node_pb2.WriteRequest.ValueType.JSON,
+                    ),
+                    timeout=self.timeout,
+                )
 
-            return True, None, {"updated_stock": commit_results}
+                if not response.success:
+                    return False, f"Failed to store order status", {}
+
+                commit_results["order_status"] = {
+                    "order_id": order_id,
+                    "status": "PROCESSING",
+                    "version": response.version,
+                }
+
+                return True, None, commit_results
 
         except grpc.RpcError as e:
             error_msg = f"Database error during commit: {e.code()}: {e.details()}"
             print(error_msg)
+            traceback.print_exc()
+
             return False, error_msg, {}
 
     def _commit_payment(
@@ -593,6 +771,47 @@ class TwoPhaseCommitCoordinator:
             print(error_msg)
             return False, error_msg, {}
 
+    def _create_order_in_db(
+        self, transaction_id: str, order_data: Dict[str, Any], status: str
+    ) -> Tuple[bool, Optional[str]]:
+        """
+        Create the order in the database with the given status.
+        """
+        order_id = order_data.get("order_id", transaction_id)
+        order_key = f"order:{order_id}"
+
+        order_value = {
+            "order_id": order_id,
+            "status": status,
+            "items": order_data.get("book_tokens", []),
+            "amount": order_data.get("amount", 0),
+            "customer": order_data.get("user", {}).get("name", "unknown"),
+            "timestamp": time.time(),
+            "transaction_id": transaction_id,
+        }
+
+        primary_node = self._get_primary_db_node()
+        if not primary_node:
+            return False, "No primary database node available"
+
+        try:
+            with grpc.insecure_channel(primary_node) as channel:
+                stub = db_node_pb2_grpc.DatabaseStub(channel)
+                response = stub.Write(
+                    db_node_pb2.WriteRequest(
+                        key=order_key,
+                        value=json.dumps(order_value),
+                        type=db_node_pb2.WriteRequest.ValueType.JSON,
+                    ),
+                    timeout=self.timeout,
+                )
+                return (
+                    response.success,
+                    response.message if not response.success else None,
+                )
+        except grpc.RpcError as e:
+            return False, f"Database error: {e.details()}"
+
     def _global_abort(self, transaction_id: str, reason: str) -> None:
         """
         Abort the transaction globally.
@@ -628,6 +847,13 @@ class TwoPhaseCommitCoordinator:
                         payment_id = payment_info.get("payment_id")
 
         print(f"Aborting transaction {transaction_id}: {reason}")
+
+        with self._transaction_lock:
+            order_data = self.transactions[transaction_id]["order_data"]
+            order_id = order_data.get("order_id", transaction_id)
+
+        # ensure this doesn't fail D:
+        self._update_order_status(order_id, "FAILED", {"reason": reason})
 
         # Abort payment if needed
         if need_payment_abort and payment_id:
