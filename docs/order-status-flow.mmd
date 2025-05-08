@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> PENDING: Order Created
+    PENDING --> PROCESSING: Job Started
+    PROCESSING --> COMPLETED: Success
+    PROCESSING --> FAILED: Error
+    COMPLETED --> [*]
+    FAILED --> [*]
+    
+    note right of PENDING
+        Order saved, waiting in queue
+    end note
+    
+    note right of PROCESSING
+        2PC transaction in progress
+    end note
+    
+    note right of COMPLETED
+        Stock decremented, payment processed
+    end note
+    
+    note right of FAILED
+        Transaction aborted, reason stored
+    end note

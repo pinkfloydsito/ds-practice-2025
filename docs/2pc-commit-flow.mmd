@@ -1,0 +1,55 @@
+sequenceDiagram
+    participant OE as Order Executor (RAFT Leader)
+    participant TPC as 2PC Coordinator
+    participant DB as Distributed Database
+    participant PS as Payment Service
+    
+    Note over OE,PS: Order Processing Initiated
+    
+    OE->>TPC: Execute Order
+    TPC->>TPC: Generate Transaction ID
+    
+    Note over TPC,PS: Phase 1 - Prepare
+    
+    par Database Prepare
+        TPC->>DB: Prepare (Check Stock)
+        DB->>DB: Verify Stock Availability
+        DB-->>TPC: Vote: Can Commit
+    and Payment Prepare  
+        TPC->>PS: Prepare (Validate Payment)
+        PS->>PS: Validate Payment Method
+        PS-->>TPC: Vote: Can Commit
+    end
+    
+    Note over TPC,PS: Decision Point
+    
+    alt All Votes = Can Commit
+        Note over TPC,PS: Phase 2 - Commit
+        
+        par Database Commit
+            TPC->>DB: Commit
+            DB->>DB: Decrement Stock
+            DB-->>TPC: ACK
+        and Payment Commit
+            TPC->>PS: Commit  
+            PS->>PS: Process Payment
+            PS-->>TPC: ACK + Confirmation
+        end
+        
+        TPC->>OE: Success + Results
+        
+    else Any Vote = Cannot Commit
+        Note over TPC,PS: Phase 2 - Abort
+        
+        par Database Abort
+            TPC->>DB: Abort
+            DB-->>TPC: ACK
+        and Payment Abort
+            TPC->>PS: Abort
+            PS-->>TPC: ACK
+        end
+        
+        TPC->>OE: Failed + Reason
+    end
+    
+    Note over OE,PS: Transaction Complete
