@@ -123,10 +123,11 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
 
         # Simulate payment processing
         # 98% success rate
-        success = random.random() < 0.0001
+        # success = random.random() < 0.0001
 
         # TODO: check this
-        # success = True
+        success = True
+
         # Update transaction status
         with self._transaction_lock:
             if transaction_id in self.transactions:

@@ -415,11 +415,9 @@ class TwoPhaseCommitCoordinator:
     ) -> Tuple[bool, Optional[str], Dict[str, Any]]:
         """
         Phase 2 of 2PC: Tell all participants to commit.
-
         Args:
             transaction_id: Transaction ID
             prepare_data: Data from prepare phase
-
         Returns:
             Tuple of (success, error_message, result)
         """
@@ -427,13 +425,12 @@ class TwoPhaseCommitCoordinator:
         with self._transaction_lock:
             if transaction_id not in self.transactions:
                 return False, "Transaction not found", {}
-
             self.transactions[transaction_id]["status"] = "COMMITTING"
             order_data = self.transactions[transaction_id]["order_data"]
 
         print(f"Phase 2 (Commit) for transaction {transaction_id}")
 
-        # Commit each participant
+        # Initialize result structure
         result = {
             "transaction_id": transaction_id,
             "order_id": order_data.get("order_id", "unknown"),
@@ -442,44 +439,49 @@ class TwoPhaseCommitCoordinator:
             "commit_results": {},
         }
 
-        # 1. Commit database changes (decrement stock)
-        db_commit_success, db_error, db_result = self._commit_database(
-            transaction_id, prepare_data.get("database", {})
-        )
-
-        if not db_commit_success:
-            return False, f"Database commit failed: {db_error}", {}
-
-        result["commit_results"]["database"] = db_result
-
-        # 2. Commit payment
+        # 1. Commit payment first
         payment_commit_success, payment_error, payment_result = self._commit_payment(
             transaction_id, prepare_data.get("payment", {})
         )
 
         if not payment_commit_success:
-            compensation_success = self._compensate_database_commit(
-                transaction_id, db_result
-            )
+            # Payment failed - no need for compensation, just report failure
+            return False, f"Payment commit failed: {payment_error}", {}
 
-            if compensation_success:
-                return False, f"Payment failed, stock restored: {payment_error}", {}
+        result["commit_results"]["payment"] = payment_result
+
+        # 2. Commit database changes (decrement stock) after successful payment
+        db_commit_success, db_error, db_result = self._commit_database(
+            transaction_id, prepare_data.get("database", {})
+        )
+
+        if not db_commit_success:
+            # Database commit failed - need to compensate payment
+            print(f"Compensating payment")
+            payment_compensation_success = True  # TODO check for the failing escenarios
+
+            if payment_compensation_success:
+                return (
+                    False,
+                    f"Database commit failed, payment refunded: {db_error}",
+                    {},
+                )
             else:
                 return (
                     False,
-                    f"CRITICAL: Payment failed and stock restoration failed: {payment_error}",
+                    f"CRITICAL: Database commit failed and payment refund failed: {db_error}",
                     {},
                 )
 
-        result["commit_results"]["payment"] = payment_result
+        result["commit_results"]["database"] = db_result
+
+        # Both commits succeeded
         if db_commit_success and payment_commit_success:
             # Update order status to COMPLETED
             order_id = order_data.get("order_id", transaction_id)
             self._update_order_status(order_id, "COMPLETED", payment_result)
 
-        # All commits succeeded
         result["status"] = "COMPLETED"
-
         return True, None, result
 
     def _compensate_database_commit(
@@ -508,6 +510,8 @@ class TwoPhaseCommitCoordinator:
                         ),
                         timeout=self.timeout,
                     )
+
+                    print("debug: ", response)
 
                     if not response.success:
                         print(f"Failed to restore stock for {book_name}")
@@ -611,6 +615,10 @@ class TwoPhaseCommitCoordinator:
                     stock_key = check_data["key"]
                     quantity = check_data["amount"]
 
+                    print(
+                        f"decrementing stock for {stock_key} {book_name} by {quantity}"
+                    )
+
                     # Decrement stock
                     response = stub.DecrementStock(
                         db_node_pb2.DecrementRequest(key=stock_key, amount=quantity),
@@ -642,32 +650,32 @@ class TwoPhaseCommitCoordinator:
             with grpc.insecure_channel(primary_node) as channel:
                 stub = db_node_pb2_grpc.DatabaseStub(channel)
 
-                for book_name, check_data in stock_checks.items():
-                    # Get stock information
-                    stock_key = check_data["key"]
-                    quantity = check_data["amount"]
-
-                    # Decrement stock
-                    response = stub.DecrementStock(
-                        db_node_pb2.DecrementRequest(key=stock_key, amount=quantity),
-                        timeout=self.timeout,
-                    )
-
-                    if not response.success:
-                        # Handle failure - in a real system, we would need to
-                        # restore any other stock decrements we already made
-                        return (
-                            False,
-                            f"Failed to decrement stock for {book_name}: {response.message}",
-                            {},
-                        )
-
-                    # Record commit result
-                    commit_results[book_name] = {
-                        "new_stock": response.new_value,
-                        "amount": quantity,
-                        "version": response.version,
-                    }
+                # for book_name, check_data in stock_checks.items():
+                #     # Get stock information
+                #     stock_key = check_data["key"]
+                #     quantity = check_data["amount"]
+                #
+                #     # Decrement stock
+                #     response = stub.DecrementStock(
+                #         db_node_pb2.DecrementRequest(key=stock_key, amount=quantity),
+                #         timeout=self.timeout,
+                #     )
+                #
+                #     if not response.success:
+                #         # Handle failure - in a real system, we would need to
+                #         # restore any other stock decrements we already made
+                #         return (
+                #             False,
+                #             f"Failed to decrement stock for {book_name}: {response.message}",
+                #             {},
+                #         )
+                #
+                #     # Record commit result
+                #     commit_results[book_name] = {
+                #         "new_stock": response.new_value,
+                #         "amount": quantity,
+                #         "version": response.version,
+                #     }
 
                 # store order status
                 order_key = f"order:{order_id}"

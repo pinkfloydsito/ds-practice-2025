@@ -907,7 +907,7 @@ class RaftNode(raft_pb2_grpc.RaftServicer):
                     term=current_term,
                     command=order,
                     index=len(self.log),
-                    priority=priority,
+                    # priority=priority,
                 )
 
                 # Add to log
