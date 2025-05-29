@@ -1,3 +1,4 @@
+import threading
 import os
 import sys
 import logging
@@ -37,6 +38,9 @@ def create_app(config_object="config.default"):
     register_database_service(app)
 
     register_error_handlers(app)
+
+    app.order_results = {}
+    app.order_results_lock = threading.Lock()
 
     return app
 

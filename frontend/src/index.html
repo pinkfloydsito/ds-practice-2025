@@ -3,198 +3,475 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout Page</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Bookstore Checkout</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .books-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .book-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quantity-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+            padding: 5px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .submit-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #218838;
+        }
+
+        .submit-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 15px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center overflow-y-auto">
-    <div class="w-full max-w-2xl bg-white p-6 rounded-lg shadow-md">
+<body>
+    <div class="container">
+        <h1>📚 Bookstore Checkout</h1>
+
+        <div id="alerts"></div>
+
         <form id="checkoutForm">
-            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Checkout Page</h1>
-
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold text-gray-700">Items</h2>
-                <div id="loadingSpinner" class="spinner-container" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Loading books...</p>
+            <!-- Books Section -->
+            <div class="form-section books-section">
+                <h3>Selected Books</h3>
+                <div class="book-item">
+                    <span>Book A</span>
+                    <div class="quantity-controls">
+                        <button type="button" class="quantity-btn" onclick="changeQuantity(this, -1)">-</button>
+                        <input type="number" class="quantity-input" value="1" min="1" data-book="Book A">
+                        <button type="button" class="quantity-btn" onclick="changeQuantity(this, 1)">+</button>
+                    </div>
                 </div>
-                <ul id="itemList" class="list-none p-0 mt-2 space-y-2">
-                    <!-- Items will be dynamically rendered here -->
-                </ul>
+                <div class="book-item">
+                    <span>Book B</span>
+                    <div class="quantity-controls">
+                        <button type="button" class="quantity-btn" onclick="changeQuantity(this, -1)">-</button>
+                        <input type="number" class="quantity-input" value="2" min="1" data-book="Book B">
+                        <button type="button" class="quantity-btn" onclick="changeQuantity(this, 1)">+</button>
+                    </div>
+                </div>
             </div>
 
-            <div class="mb-4">
-                <label for="name" class="block text-sm font-medium text-gray-700">Name:</label>
-                <input type="text" id="name" name="name" value="John Doe" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+            <!-- Customer Info -->
+            <div class="form-section">
+                <h3>Customer Information</h3>
+                <div class="form-group">
+                    <label for="customerName">Name *</label>
+                    <input type="text" id="customerName" required data-cy="customer-name" value="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="customerEmail">Email *</label>
+                    <input type="email" id="customerEmail" required data-cy="customer-email" value="john.doe@example.ru">
+                </div>
             </div>
-            <div class="mb-4">
-                <label for="contact" class="block text-sm font-medium text-gray-700">Contact:</label>
-                <input type="email" id="contact" name="contact" value="john.doe@example.com" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+
+            <!-- Credit Card -->
+            <div class="form-section">
+                <h3>Credit Card</h3>
+                <div class="form-group">
+                    <label for="cardNumber">Card Number *</label>
+                    <input type="text" id="cardNumber" required data-cy="card-number" value="6011111111111117">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expiryDate">Expiry Date *</label>
+                        <input type="text" id="expiryDate" required data-cy="expiry-date" value="12/95" placeholder="MM/YY">
+                    </div>
+                    <div class="form-group">
+                        <label for="cvv">CVV *</label>
+                        <input type="text" id="cvv" required data-cy="cvv" value="123" maxlength="3">
+                    </div>
+                </div>
             </div>
-            <div class="mb-4">
-                <label for="creditCard" class="block text-sm font-medium text-gray-700">Credit Card Number:</label>
-                <input type="text" id="creditCard" name="creditCard" value="4111111111111111" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+
+            <!-- Billing Address -->
+            <div class="form-section">
+                <h3>Billing Address</h3>
+                <div class="form-group">
+                    <label for="street">Street *</label>
+                    <input type="text" id="street" required data-cy="street" value="123 Main St">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City *</label>
+                        <input type="text" id="city" required data-cy="city" value="Springfield">
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State *</label>
+                        <input type="text" id="state" required data-cy="state" value="IL">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="zip">ZIP *</label>
+                        <input type="text" id="zip" required data-cy="zip" value="62701">
+                    </div>
+                    <div class="form-group">
+                        <label for="country">Country *</label>
+                        <input type="text" id="country" required data-cy="country" value="USA">
+                    </div>
+                </div>
             </div>
-            <div class="mb-4">
-                <label for="expirationDate" class="block text-sm font-medium text-gray-700">Expiration Date:</label>
-                <input type="text" id="expirationDate" name="expirationDate" value="12/25" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+
+            <!-- Additional Options -->
+            <div class="form-section">
+                <h3>Options</h3>
+                <div class="form-group">
+                    <label for="shippingMethod">Shipping Method *</label>
+                    <select id="shippingMethod" required data-cy="shipping-method">
+                        <option value="Standard" selected>Standard</option>
+                        <option value="Express">Express</option>
+                        <option value="Overnight">Overnight</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="userComment">User Comment</label>
+                    <textarea id="userComment" data-cy="user-comment" placeholder="Please handle with care.">Please handle with care.</textarea>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="giftWrapping" data-cy="gift-wrapping" checked>
+                    <label for="giftWrapping">Gift Wrapping</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="termsAccepted" required data-cy="terms-accepted">
+                    <label for="termsAccepted">I accept the Terms and Conditions *</label>
+                </div>
             </div>
-            <div class="mb-4">
-                <label for="cvv" class="block text-sm font-medium text-gray-700">CVV:</label>
-                <input type="text" id="cvv" name="cvv" value="123" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing your order...</p>
             </div>
-            <div class="mb-4">
-                <label for="userComment" class="block text-sm font-medium text-gray-700">Comment:</label>
-                <textarea id="userComment" name="userComment" class="w-full border border-gray-300 rounded-lg p-2 mt-1">Please handle with care.</textarea>
-            </div>
-            <div class="mb-4">
-                <label for="billingAddress" class="block text-sm font-medium text-gray-700">Billing Address:</label>
-                <input type="text" id="billingStreet" name="billingStreet" value="123 Main St" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingCity" name="billingCity" value="Springfield" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingState" name="billingState" value="IL" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingZip" name="billingZip" value="62701" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                <input type="text" id="billingCountry" name="billingCountry" value="USA" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-            </div>
-            <div class="mb-4">
-                <label for="shippingMethod" class="block text-sm font-medium text-gray-700">Shipping Method:</label>
-                <select id="shippingMethod" name="shippingMethod" required class="w-full border border-gray-300 rounded-lg p-2 mt-1">
-                    <option value="Standard" selected>Standard</option>
-                    <option value="Express">Express</option>
-                    <option value="Next-Day">Next-Day</option>
-                </select>
-            </div>
-            <div class="mb-4 flex items-center">
-                <input type="checkbox" id="giftWrapping" name="giftWrapping" checked class="mr-2 border border-gray-300 rounded">
-                <label for="giftWrapping" class="text-sm font-medium text-gray-700">Gift Wrapping</label>
-            </div>
-            <div class="mb-4 flex items-center">
-                <input type="checkbox" id="terms" name="terms" checked required class="mr-2 border border-gray-300 rounded">
-                <label for="terms" class="text-sm font-medium text-gray-700">Accept Terms and Conditions</label>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-700">Submit Order</button>
+
+            <button type="submit" class="submit-btn" id="submitBtn" data-cy="submit-button">
+                Complete Purchase
+            </button>
         </form>
-
-        <div id="response" class="mt-6 p-4 border rounded-lg hidden"></div>
     </div>
 
     <script>
-      function getRandomBooks(allBooks, count) {
-          const booksCopy = [...allBooks];
-          
-          for (let i = booksCopy.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [booksCopy[i], booksCopy[j]] = [booksCopy[j], booksCopy[i]];
-          }
-
-          return booksCopy.slice(0, Math.min(count, booksCopy.length));
-      }
-
-    async function renderBooks(books) {
-      // random slice
-      const randomBooks = getRandomBooks(books, 2);
-
-      // random quantity
-      const random_value = Math.floor(Math.random() * 10) + 1;
-  
-      randomBooks.forEach(book => {
-          const li = document.createElement('li');
-          li.textContent = `${book.title} - Quantity: ${random_value}`;
-          li.className = "bg-gray-100 p-3 rounded-lg mb-2 shadow-sm hover:bg-gray-200 transition-all";
-          itemListElement.appendChild(li);
-      });
-    }
-        async function fetchBooks() {
-            try {
-                
-                const flaskEndpoint = 'http://localhost:8081/books';
-                const response = await fetch(flaskEndpoint, {
-                  method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                  },
-                });
-
-                const data = await response.json();
-                await renderBooks(data.books);
-            } catch (error) {
-                console.error('Error fetching books:', error);
-                itemListElement.innerHTML = '<li style="color: red;">Error loading books. Please try again later.</li>';
-            } finally {
-            }
+        // Quantity control
+        function changeQuantity(button, change) {
+            const input = button.parentNode.querySelector('.quantity-input');
+            const currentValue = parseInt(input.value);
+            const newValue = Math.max(1, currentValue + change);
+            input.value = newValue;
         }
 
-        const itemListElement = document.getElementById('itemList');
-        fetchBooks();
+        // Show alert
+        function showAlert(message, type = 'error') {
+            const alertsContainer = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.setAttribute('data-cy', `alert-${type}`);
+            alertsContainer.innerHTML = '';
+            alertsContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
 
-        document.getElementById('checkoutForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
+        // Order polling
+        async function startOrderPolling(orderId) {
+            const maxAttempts = 30;
+            let attempts = 0;
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`http://localhost:8081/v2/orders/${orderId}`);
 
-        const items = Array.from(itemListElement.children).map(li => { return {name: li.textContent.split(' - ')[0], quantity: parseInt(li.textContent.split(' Quantity: ')[1])}});
+                    if (response.ok) {
+                        const orderData = await response.json();
+                        
+                        if (orderData.status == 'Order Approved') {
+                            clearInterval(pollInterval);
+                            showAlert(`Order completed successfully! Order ID: ${orderId}`, 'success');
+                            
+                            if (orderData.suggestedBooks && orderData.suggestedBooks.length > 0) {
+                                showSuggestedBooks(orderData.suggestedBooks);
+                            }
+                            
+                            resetForm();
+                            
+                        } else if (orderData.status === 'FAILED' || orderData.error) {
+                            clearInterval(pollInterval);
+                            const errorMessage = orderData.error || 'Order was rejected';
+                            showAlert(errorMessage, 'error');
+                            resetForm();
+                        }
+                        
+                    } else if (response.status !== 404) {
+                        console.error('Error polling order status:', response.status);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error polling order status:', error);
+                }
+                
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    showAlert('Order processing is taking longer than expected. Please check back later.', 'error');
+                    resetForm();
+                }
+                
+            }, 1000);
+        }
 
-            const formData = new FormData(event.target);
-            const data = {
-                user: {
-                    name: formData.get('name'),
-                    contact: formData.get('contact'),
-                },
-                creditCard: {
-                    number: formData.get('creditCard'),
-                    expirationDate: formData.get('expirationDate'),
-                    cvv: formData.get('cvv'),
-                },
-                userComment: formData.get('userComment'),
-                items: items,
-                billingAddress: {
-                    street: formData.get('billingStreet'),
-                    city: formData.get('billingCity'),
-                    state: formData.get('billingState'),
-                    zip: formData.get('billingZip'),
-                    country: formData.get('billingCountry'),
-                },
-                shippingMethod: formData.get('shippingMethod'),
-                giftWrapping: formData.get('giftWrapping') === 'on',
-                termsAndConditionsAccepted: formData.get('terms') === 'on',
-            };
+        // Show suggested books
+        function showSuggestedBooks(suggestedBooks) {
+            const alertsContainer = document.getElementById('alerts');
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'alert alert-success';
+            suggestionsDiv.setAttribute('data-cy', 'suggested-books');
+            
+            let html = '<strong>📚 Recommended for you:</strong><br>';
+            suggestedBooks.forEach(book => {
+                html += `• ${book.title} by ${book.author}<br>`;
+            });
+            
+            suggestionsDiv.innerHTML = html;
+            alertsContainer.appendChild(suggestionsDiv);
+        }
 
+        // Reset form after order completion
+        function resetForm() {
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Form submission
+        document.getElementById('checkoutForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            
             try {
-                const response = await fetch('http://localhost:8081/checkout', {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    method: 'POST',
-                    body: JSON.stringify(data),
+                // Collect books
+                const items = [];
+                document.querySelectorAll('.quantity-input').forEach(input => {
+                    const bookName = input.getAttribute('data-book');
+                    const quantity = parseInt(input.value);
+                    items.push({ name: bookName, quantity: quantity });
+                });
 
+                // Build request matching your exact API format
+                const requestData = {
+                    user: {
+                        name: document.getElementById('customerName').value,
+                        contact: document.getElementById('customerEmail').value
+                    },
+                    creditCard: {
+                        number: document.getElementById('cardNumber').value,
+                        expirationDate: document.getElementById('expiryDate').value,
+                        cvv: document.getElementById('cvv').value
+                    },
+                    userComment: document.getElementById('userComment').value,
+                    items: items,
+                    billingAddress: {
+                        street: document.getElementById('street').value,
+                        city: document.getElementById('city').value,
+                        state: document.getElementById('state').value,
+                        zip: document.getElementById('zip').value,
+                        country: document.getElementById('country').value
+                    },
+                    shippingMethod: document.getElementById('shippingMethod').value,
+                    giftWrapping: document.getElementById('giftWrapping').checked,
+                    termsAndConditionsAccepted: document.getElementById('termsAccepted').checked
+                };
+
+                const response = await fetch('http://localhost:8081/v2/checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': '*/*',
+                        'Origin': 'http://localhost:8080'
+                    },
+                    body: JSON.stringify(requestData)
                 });
 
                 const result = await response.json();
-                const responseDiv = document.getElementById('response');
 
                 if (response.ok) {
-                    const suggestedBooks = result.suggestedBooks.map(book => `<li>${book.title} by ${book.author}</li>`).join('');
-                    responseDiv.innerHTML = `
-                        <strong>Order status: ${result.status}</strong><br>
-                        Order ID: ${result.orderId}<br>
-                        ${result.status === "Order Approved" ?
-                            `Suggested Books:
-                            <ul class="list-disc pl-5 mt-2 space-y-1">${suggestedBooks}</ul>`
-                        : ``
-                        }
-                    `;
-                    color = result.status === 'Order Approved' ? 'green' : 'red';
-                    responseDiv.className = `mt-6 p-4 border rounded-lg bg-${color}-100 text-${color}-700`;
+                    showAlert(`Order submitted! Order ID: ${result.orderId}. Processing...`, 'success');
+                    startOrderPolling(result.orderId);
                 } else {
-                    responseDiv.textContent = `Error: ${result.error.message}`;
-                    responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
+                    const errorMessage = result.error?.message || 'Order failed';
+                    showAlert(errorMessage, 'error');
+                    resetForm();
                 }
-
-                responseDiv.style.display = 'block';
-                // scroll to the bottom of the page
-                window.scrollTo(0, document.body.scrollHeight);
             } catch (error) {
-                const responseDiv = document.getElementById('response');
-                responseDiv.textContent = `Unexpected error occurred: ${error.message}`;
-                responseDiv.className = "mt-6 p-4 border rounded-lg bg-red-100 text-red-700";
-                responseDiv.style.display = 'block';
+                console.error('Error:', error);
+                showAlert('Network error. Please try again.', 'error');
+                resetForm();
             }
         });
     </script>

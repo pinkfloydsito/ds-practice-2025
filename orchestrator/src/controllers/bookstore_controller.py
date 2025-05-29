@@ -2,6 +2,7 @@ import os
 import traceback
 import sys
 import uuid
+import threading
 from flask import Blueprint, request, jsonify, current_app
 from marshmallow import ValidationError
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -134,23 +135,57 @@ def checkout():
 
 @bookstore_bp.route("/v2/checkout", methods=["POST"])
 def checkout_v2():
+    """Enhanced checkout v2 with validation and service initialization before Raft submission."""
     order_id = str(uuid.uuid4())
     grpc_factory = current_app.grpc_factory
+    order_event_tracker = current_app.order_event_tracker
 
     try:
-        # 1) Validate the request
-        schema = CheckoutRequestSchema()
-        json_data = schema.load(request.json)
+        # 1. Validate request schema
+        checkout_data = _validate_checkout_request(request.json)
 
-        order_data = items_from_data(order_id, json_data)
-        raft_service = RaftService(grpc_factory)
+        # 2. Extract and create domain objects
+        order_info = _create_order_info(order_id, checkout_data)
+        user_info = _create_user_info(checkout_data, request.remote_addr)
+        credit_card_info = _create_credit_card_info(checkout_data)
+        billing_info = _create_billing_info(checkout_data)
 
-        result = raft_service.submit_job(order_id, order_data)
-        success = result.success
+        # 3. Initialize orchestrator and services
+        orchestrator = OrderOrchestratorService(grpc_factory, order_event_tracker)
+
+        if not orchestrator.initialize_services(
+            order_info, user_info, credit_card_info, billing_info
+        ):
+            print("[Orchestrator] Service initialization failed")
+            return _create_error_response(
+                "ORDER_REJECTED", "Service initialization failed"
+            ), 400
+
+        # Process sync order operations
+        success, result = orchestrator.process_order(
+            order_info, user_info, credit_card_info, billing_info
+        )
+
         if not success:
-            return jsonify(result), 400
+            print(f"[Orchestrator] Order processing failed: {result}")
+            return _create_error_response(
+                "ORDER_REJECTED", result.get("message", "Order processing failed")
+            ), 400
 
-        # we need this order_id later for the polling
+        store_order_result(order_id, result)
+
+        # 4. Submit to Raft cluster
+        raft_service = RaftService(grpc_factory)
+        print(order_info)
+        raft_result = raft_service.submit_job(order_id, order_info)
+
+        if not raft_result.success:
+            print(f"[Orchestrator] Raft submission failed: {raft_result.error}")
+            return _create_error_response(
+                "ORDER_REJECTED", "Raft submission failed"
+            ), 400
+
+        # 5. Return pending response for polling
         response_data = {
             "orderId": order_id,
             "status": "PENDING",
@@ -158,18 +193,95 @@ def checkout_v2():
 
         return jsonify(OrderStatusResponseSchema().dump(response_data))
 
+    except ValidationError as err:
+        print(f"[Orchestrator] Validation error: {err.messages}")
+        return _create_validation_error_response(err), 400
     except Exception as e:
         print(f"Unexpected error: {e}")
-        traceback.print_exc()  # debugging purposes
-
-        return jsonify(
-            {
-                "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "An internal error occurred",
-                }
-            }
+        traceback.print_exc()
+        return _create_error_response(
+            "INTERNAL_ERROR", "An internal error occurred"
         ), 500
+
+
+def store_order_result(order_id: str, result: dict):
+    """Store the complete order result in Flask app context."""
+
+    with current_app.order_results_lock:
+        print(f"[Orchestrator] Stored result for order {order_id}")
+        current_app.order_results[order_id] = result
+
+
+def clear_stored_order_result(order_id: str):
+    """Clear stored order result from Flask app context."""
+    if order_id in current_app.order_results:
+        del current_app.order_results[order_id]
+        print(f"[Orchestrator] Cleared stored result for order {order_id}")
+
+
+def _validate_checkout_request(request_json):
+    """Validate the incoming checkout request."""
+    schema = CheckoutRequestSchema()
+    data = schema.load(request_json)
+
+    if not data["termsAndConditionsAccepted"]:
+        raise ValidationError(
+            {"termsAndConditionsAccepted": ["Terms and conditions must be accepted"]}
+        )
+
+    return data
+
+
+def _create_order_info(order_id: str, checkout_data: dict) -> OrderInfo:
+    """Create OrderInfo from checkout data."""
+    books = checkout_data.get("items", [])
+    book_tokens = [book["name"] for book in books]
+    amount = sum(book.get("price", 10) for book in books)
+
+    return OrderInfo(order_id=order_id, book_tokens=book_tokens, amount=amount)
+
+
+def _create_user_info(checkout_data: dict, remote_addr: str) -> UserInfo:
+    """Create UserInfo from checkout data."""
+    user_data = checkout_data.get("user", {})
+    return UserInfo(
+        user_id=user_data.get("name", "guest"),
+        email=user_data.get("contact", ""),
+        ip_address=remote_addr or "",
+    )
+
+
+def _create_credit_card_info(checkout_data: dict) -> CreditCardInfo:
+    """Create CreditCardInfo from checkout data."""
+    card_data = checkout_data.get("creditCard", {})
+    return CreditCardInfo(
+        number=card_data.get("number"), expiry_date=card_data.get("expirationDate")
+    )
+
+
+def _create_billing_info(checkout_data: dict) -> BillingInfo:
+    """Create BillingInfo from checkout data."""
+    billing_data = checkout_data["billingAddress"]
+    return BillingInfo(city=billing_data["city"], country=billing_data["country"])
+
+
+def _create_error_response(error_code: str, message: str) -> dict:
+    """Create standardized error response."""
+    return {"error": {"code": error_code, "message": message}}
+
+
+def _create_validation_error_response(validation_error: ValidationError) -> dict:
+    """Create validation error response from marshmallow ValidationError."""
+    return {
+        "error": {
+            "code": "ORDER_REJECTED",
+            "message": ", ".join(
+                f"{field}: {msg}"
+                for field, messages in validation_error.messages.items()
+                for msg in messages
+            ),
+        }
+    }
 
 
 @bookstore_bp.route("/books", methods=["GET"])

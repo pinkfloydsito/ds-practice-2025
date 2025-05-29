@@ -30,15 +30,23 @@ trace.get_tracer_provider().add_span_processor(
     BatchSpanProcessor(OTLPSpanExporter(endpoint="http://observability:4318/v1/traces"))
 )
 
-reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint="http://observability:4318/v1/metrics"))
+reader = PeriodicExportingMetricReader(
+    OTLPMetricExporter(endpoint="http://observability:4318/v1/metrics")
+)
 metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[reader]))
 meter = metrics.get_meter(__name__)
 
 # Metrics
-orders_processed = meter.create_counter("orchestrator.orders_processed", description="Total processed orders")
-failed_orders = meter.create_counter("orchestrator.orders_failed", description="Failed order attempts")
+orders_processed = meter.create_counter(
+    "orchestrator.orders_processed", description="Total processed orders"
+)
+failed_orders = meter.create_counter(
+    "orchestrator.orders_failed", description="Failed order attempts"
+)
 order_duration = meter.create_histogram("orchestrator.order_duration_ms", unit="ms")
-active_orders = meter.create_up_down_counter("orchestrator.active_orders", description="Orders being processed")
+active_orders = meter.create_up_down_counter(
+    "orchestrator.active_orders", description="Orders being processed"
+)
 
 # Path fix
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
@@ -60,18 +68,26 @@ class OrderOrchestratorService:
 
     def initialize_services(self, order, user, credit_card, billing) -> bool:
         self.order_event_tracker.initialize_order(order.order_id)
-        self.order_event_tracker.record_event(order.order_id, "orchestrator", "initializer")
+        self.order_event_tracker.record_event(
+            order.order_id, "orchestrator", "initializer"
+        )
 
-        tx_init_ok = self.transaction_service.initialize_order(order.order_id, credit_card, billing)
+        tx_init_ok = self.transaction_service.initialize_order(
+            order.order_id, credit_card, billing
+        )
         fraud_init_ok = self.fraud_service.initialize_order(order, user, billing)
-        sugg_init_ok = self.suggestions_service.initialize_order(order.order_id, order.book_tokens, limit=3)
+        sugg_init_ok = self.suggestions_service.initialize_order(
+            order.order_id, order.book_tokens, limit=3
+        )
 
         return tx_init_ok and fraud_init_ok and sugg_init_ok
 
     def _get_final_vector_clock(self, order_id: str) -> Dict[str, int]:
         return self.order_event_tracker.get_clock(order_id, "orchestrator")
 
-    def _clear_service_data(self, service, order_id: str, final_vector_clock: Dict[str, int]) -> bool:
+    def _clear_service_data(
+        self, service, order_id: str, final_vector_clock: Dict[str, int]
+    ) -> bool:
         try:
             print(f"[Orchestrator] Clearing data for {service.__class__.__name__}")
             return service.clear_order_data(order_id, final_vector_clock)
@@ -82,9 +98,27 @@ class OrderOrchestratorService:
     def broadcast_clear_order(self, order_id: str) -> Tuple[bool, List[str]]:
         errors = []
         final_vector_clock = self._get_final_vector_clock(order_id)
-        self.order_event_tracker.record_event(order_id, "orchestrator", "broadcast_clear_order")
+        self.order_event_tracker.record_event(
+            order_id, "orchestrator", "broadcast_clear_order"
+        )
 
-        services = [self.transaction_service, self.fraud_service, self.suggestions_service]
+        services = [
+            self.transaction_service,
+            self.fraud_service,
+            self.suggestions_service,
+        ]
+
+        # Record final event before clearing
+        self.order_event_tracker.record_event(
+            order_id, "orchestrator", "broadcast_clear_order"
+        )
+
+        # Get the updated final vector clock after recording the event
+        final_vector_clock = self._get_final_vector_clock(order_id)
+
+        print(
+            f"[Orchestrator] Broadcasting clear order for {order_id} with final vector clock: {final_vector_clock}"
+        )
 
         success = True
         for service in services:
@@ -106,7 +140,12 @@ class OrderOrchestratorService:
             start_time = time.time()
             active_orders.add(1)
 
-            results = {"billing": None, "card": None, "fraud": None, "suggestions": None}
+            results = {
+                "billing": None,
+                "card": None,
+                "fraud": None,
+                "suggestions": None,
+            }
             errors = []
 
             billing_flag = threading.Event()
@@ -118,7 +157,9 @@ class OrderOrchestratorService:
             def billing_worker():
                 with tracer.start_as_current_span("orchestrator.billing_check"):
                     try:
-                        billing_result = self.transaction_service.check_billing(order.order_id, billing)
+                        billing_result = self.transaction_service.check_billing(
+                            order.order_id, billing
+                        )
                         with results_lock:
                             results["billing"] = billing_result
                         if not billing_result.success:
@@ -129,10 +170,13 @@ class OrderOrchestratorService:
 
             def card_worker():
                 billing_flag.wait()
-                if early_termination.is_set(): return
+                if early_termination.is_set():
+                    return
                 with tracer.start_as_current_span("orchestrator.card_check"):
                     try:
-                        card_result = self.transaction_service.check_card(order.order_id, credit_card)
+                        card_result = self.transaction_service.check_card(
+                            order.order_id, credit_card
+                        )
                         with results_lock:
                             results["card"] = card_result
                         if not card_result.success:
@@ -144,7 +188,9 @@ class OrderOrchestratorService:
             def fraud_worker():
                 with tracer.start_as_current_span("orchestrator.fraud_check"):
                     try:
-                        fraud_result = self.fraud_service.check_fraud(order, user, billing)
+                        fraud_result = self.fraud_service.check_fraud(
+                            order, user, billing
+                        )
                         with results_lock:
                             results["fraud"] = fraud_result
                         if not fraud_result.success:
@@ -156,10 +202,13 @@ class OrderOrchestratorService:
             def suggestions_worker():
                 fraud_flag.wait()
                 card_flag.wait()
-                if early_termination.is_set(): return
+                if early_termination.is_set():
+                    return
                 with tracer.start_as_current_span("orchestrator.suggestions"):
                     try:
-                        suggestions = self.suggestions_service.get_suggestions(order.order_id)
+                        suggestions = self.suggestions_service.get_suggestions(
+                            order.order_id
+                        )
                         with results_lock:
                             results["suggestions"] = suggestions
                     except Exception as e:
@@ -187,7 +236,9 @@ class OrderOrchestratorService:
                     pass
                 termination_thread.join(timeout=1)
 
-            broadcast_success, broadcast_errors = self.broadcast_clear_order(order.order_id)
+            broadcast_success, broadcast_errors = self.broadcast_clear_order(
+                order.order_id
+            )
 
             elapsed = (time.time() - start_time) * 1000
             order_duration.record(elapsed)
@@ -195,11 +246,15 @@ class OrderOrchestratorService:
 
             if errors:
                 failed_orders.add(1)
-                return False, {"error": {"code": "ORDER_REJECTED", "message": " / ".join(errors)}}
+                return False, {
+                    "error": {"code": "ORDER_REJECTED", "message": " / ".join(errors)}
+                }
 
             orders_processed.add(1)
             return True, {
                 "orderId": order.order_id,
                 "status": "Order Approved",
-                "suggestedBooks": results["suggestions"].data if results["suggestions"] else [],
+                "suggestedBooks": results["suggestions"].data
+                if results["suggestions"]
+                else [],
             }

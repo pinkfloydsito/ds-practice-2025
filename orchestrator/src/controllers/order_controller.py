@@ -15,6 +15,14 @@ def get_order_status(order_id):
 
         if success:
             order_data = json.loads(value)
+            stored_result = get_stored_order_result(order_id)
+
+            if stored_result:
+                order_data.update(stored_result)
+
+                if "suggestedBooks" in stored_result:
+                    order_data["suggestedBooks"] = stored_result["suggestedBooks"]
+
             return jsonify(order_data)
 
         print(f"Error reading order {order_id}: {error}")
@@ -23,3 +31,8 @@ def get_order_status(order_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def get_stored_order_result(order_id: str) -> dict:
+    """Get stored order result from Flask app context."""
+    return current_app.order_results.get(order_id, None)

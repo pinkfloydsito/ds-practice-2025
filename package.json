@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:run:chrome": "cypress run --browser chrome",
+    "cy:run:headless": "cypress run --headless",
+    "test:e2e": "cypress run --spec 'cypress/e2e/checkout.cy.js'",
+    "test:e2e:dev": "cypress open --e2e",
+    "test:e2e:all": "cypress run",
+    "start:frontend": "npx serve frontend/src -l 8080",
+    "start:backend": "cd orchestrator && python src/wsgi.py",
+    "test:setup": "npm install cypress --save-dev"
+  },
+  "devDependencies": {
+    "cypress": "^13.6.2",
+    "serve": "^14.2.1"
+  }
+}
