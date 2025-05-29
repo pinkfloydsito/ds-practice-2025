@@ -157,7 +157,17 @@ services:
       - ./utils:/app/utils
       # Mount the transection_verification/src directory in the current directory to the /app/transection_verification/src directory in the container
       - ./transaction_verification/src:/app/transaction_verification/src
-  
+  observability:
+    image: grafana/otel-lgtm
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - bookstore-network
+    environment:
+      - OTEL_METRIC_EXPORT_INTERVAL=1000 
+    
   raft-node-1:
     <<: *raft-node-template
     container_name: raft-node1
