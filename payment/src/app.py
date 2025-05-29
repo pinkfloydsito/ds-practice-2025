@@ -36,7 +36,9 @@ resource = Resource.create(attributes={"service.name": "payment"})
 # Tracing setup
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer = trace.get_tracer(__name__)
-span_processor = BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{OTEL_EXPORTER_ENDPOINT}/v1/traces"))
+span_processor = BatchSpanProcessor(
+    OTLPSpanExporter(endpoint=f"{OTEL_EXPORTER_ENDPOINT}/v1/traces")
+)
 trace.get_tracer_provider().add_span_processor(span_processor)
 
 # Metrics setup
@@ -98,10 +100,14 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                     self.transactions[transaction_id]["status"] = "PREPARED"
                 else:
                     self.transactions[transaction_id]["status"] = "FAILED"
-                    self.transactions[transaction_id]["error"] = "Payment validation failed"
+                    self.transactions[transaction_id]["error"] = (
+                        "Payment validation failed"
+                    )
 
             if can_commit:
-                return payment_pb2.PrepareResponse(can_commit=True, payment_id=payment_id)
+                return payment_pb2.PrepareResponse(
+                    can_commit=True, payment_id=payment_id
+                )
             else:
                 return payment_pb2.PrepareResponse(
                     can_commit=False, error_message="Payment validation failed"
@@ -112,6 +118,57 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             transaction_id = request.transaction_id
             payment_id = request.payment_id
 
+        # Check if transaction exists
+        with self._transaction_lock:
+            if transaction_id not in self.transactions:
+                return payment_pb2.CommitResponse(
+                    success=False, error_message="Transaction not found"
+                )
+
+            transaction = self.transactions[transaction_id]
+
+            # Verify payment ID
+            if transaction["payment_id"] != payment_id:
+                return payment_pb2.CommitResponse(
+                    success=False, error_message="Invalid payment ID"
+                )
+
+            # Check if transaction is in PREPARED state
+            if transaction["status"] != "PREPARED":
+                return payment_pb2.CommitResponse(
+                    success=False,
+                    error_message=f"Transaction not in PREPARED state: {transaction['status']}",
+                )
+
+            # Update status
+            transaction["status"] = "COMMITTING"
+
+        print(f"Committing payment for transaction {transaction_id}")
+
+        # Simulate payment processing
+        # 98% success rate
+        # success = random.random() < 0.0001
+
+        # TODO: check this
+        success = True
+
+        # Update transaction status
+        with self._transaction_lock:
+            if transaction_id in self.transactions:
+                if success:
+                    self.transactions[transaction_id]["status"] = "COMMITTED"
+                    self.transactions[transaction_id]["confirmation_code"] = (
+                        f"PAY-{uuid.uuid4().hex[:8].upper()}"
+                    )
+                    self.transactions[transaction_id]["commit_time"] = time.time()
+                else:
+                    self.transactions[transaction_id]["status"] = "FAILED"
+                    self.transactions[transaction_id]["error"] = (
+                        "Payment processing failed"
+                    )
+
+        if success:
+            # Get transaction details
             with self._transaction_lock:
                 if transaction_id not in self.transactions:
                     return payment_pb2.CommitResponse(
@@ -141,7 +198,9 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             with self._transaction_lock:
                 if success:
                     transaction["status"] = "COMMITTED"
-                    transaction["confirmation_code"] = f"PAY-{uuid.uuid4().hex[:8].upper()}"
+                    transaction["confirmation_code"] = (
+                        f"PAY-{uuid.uuid4().hex[:8].upper()}"
+                    )
                     transaction["commit_time"] = time.time()
                 else:
                     transaction["status"] = "FAILED"
@@ -157,9 +216,13 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                     confirmation_code=transaction["confirmation_code"],
                     timestamp=int(transaction["commit_time"]),
                 )
-                return payment_pb2.CommitResponse(success=True, payment_result=payment_result)
+                return payment_pb2.CommitResponse(
+                    success=True, payment_result=payment_result
+                )
             else:
-                return payment_pb2.CommitResponse(success=False, error_message="Payment processing failed")
+                return payment_pb2.CommitResponse(
+                    success=False, error_message="Payment processing failed"
+                )
 
     def Abort(self, request, context):
         with tracer.start_as_current_span("payment.abort"):

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+reports/*.html
+logs/*.log
+*.egg-info/
+.pytest_cache/

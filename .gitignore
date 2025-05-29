@@ -5,3 +5,77 @@ postgres_data/
 ai/
 .vscode/
 logs/
+
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+cypress/fixtures/downloads/
+
+# Test results and reports
+cypress/reports/
+cypress/results/
+mochawesome-report/
+junit-results/
+test-results*.xml
+
+# Cypress cache and logs
+.cypress-cache/
+cypress/logs/
+cypress.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node modules (if Cypress is in a subdirectory)
+node_modules/
+cypress/node_modules/
+
+# Environment files
+cypress.env.json
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.nyc_output/
+coverage/
+
+# Package manager files
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
+
+# Cypress binary cache (usually handled automatically)
+# Uncomment if you want to ignore the binary cache
+# ~/.cache/Cypress/
+
+# Custom test data files (optional)
+cypress/fixtures/generated/
+cypress/fixtures/temp/
+
+# Backup files
+*.bak
+*.backup
+
+# Log files
+*.log
