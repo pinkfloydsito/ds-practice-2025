@@ -50,7 +50,8 @@ CUSTOMER_PROFILES = [
 FRAUDULENT_PATTERNS = [
     {"card": "0000000000000000", "reason": "invalid_card"},
     {"card": "1234567890123456", "reason": "test_card"},
-    {"email": "fraud@suspicious.com", "reason": "suspicious_email"},
+    {"email": "fraud@suspicious.ru", "reason": "suspicious_email"},
+    {"email": "fraud@suspicious.test", "reason": "fake_email"},
     {"amount_multiplier": 100, "reason": "high_amount"},  # Order 100x normal quantity
 ]
 

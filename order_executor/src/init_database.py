@@ -25,10 +25,10 @@ def initialize_database():
     # Define sample books
     books = {
         "Book A": 100,
-        "Book B": 75,
-        "Book C": 50,
-        "Book D": 25,
-        "Book E": 10,
+        "Book B": 175,
+        "Book C": 150,
+        "Book D": 125,
+        "Book E": 110,
         "Book F": 1,
         "Harry Potter": 200,
         "The Great Gatsby": 150,

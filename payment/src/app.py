@@ -8,7 +8,7 @@ import grpc
 from concurrent import futures
 from typing import Dict, Any, Optional
 
-# Add protocol buffer path
+# protobuff imports
 FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
 PROTO_DIR = os.path.abspath(os.path.join(FILE, "../../../utils/pb/payment_service"))
 sys.path.insert(0, PROTO_DIR)
@@ -30,7 +30,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
-OTEL_EXPORTER_ENDPOINT = "http://observability:4318"
+OTEL_EXPORTER_ENDPOINT = "http://otel-collector:4318"
 resource = Resource.create(attributes={"service.name": "payment"})
 
 # Tracing setup
@@ -59,7 +59,6 @@ payment_counter = meter.create_counter(
     description="Number of payment transactions processed",
 )
 
-# Default port
 DEFAULT_PORT = 50053
 
 
@@ -75,9 +74,12 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             payment_method = request.payment_method
             customer_id = request.customer_id
 
-            print(f"Preparing payment for transaction {transaction_id}: {amount}")
+            print(
+                f"[Payment] Preparing payment for transaction {transaction_id}: ${amount}"
+            )
 
             payment_id = str(uuid.uuid4())
+
             with self._transaction_lock:
                 self.transactions[transaction_id] = {
                     "payment_id": payment_id,
@@ -89,20 +91,21 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                     "metadata": {k: v for k, v in request.metadata.items()},
                 }
 
-            can_commit = False
-            if payment_method == "Credit Card":
-                can_commit = random.random() < 0.95
-            elif payment_method == "Bank Transfer":
-                can_commit = random.random() < 0.90
+            # Simulate payment validation (95% success rate for demo)
+            can_commit = random.random() < 0.95
 
             with self._transaction_lock:
                 if can_commit:
                     self.transactions[transaction_id]["status"] = "PREPARED"
+                    print(
+                        f"[Payment] Transaction {transaction_id} prepared successfully"
+                    )
                 else:
                     self.transactions[transaction_id]["status"] = "FAILED"
                     self.transactions[transaction_id]["error"] = (
                         "Payment validation failed"
                     )
+                    print(f"[Payment] Transaction {transaction_id} preparation failed")
 
             if can_commit:
                 return payment_pb2.PrepareResponse(
@@ -114,108 +117,84 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
                 )
 
     def Commit(self, request, context):
+        """FIXED: Remove duplicate logic and race condition"""
         with tracer.start_as_current_span("payment.commit"):
             transaction_id = request.transaction_id
             payment_id = request.payment_id
 
-        # Check if transaction exists
-        with self._transaction_lock:
-            if transaction_id not in self.transactions:
-                return payment_pb2.CommitResponse(
-                    success=False, error_message="Transaction not found"
-                )
+            print(f"[Payment] Committing transaction {transaction_id}")
 
-            transaction = self.transactions[transaction_id]
-
-            # Verify payment ID
-            if transaction["payment_id"] != payment_id:
-                return payment_pb2.CommitResponse(
-                    success=False, error_message="Invalid payment ID"
-                )
-
-            # Check if transaction is in PREPARED state
-            if transaction["status"] != "PREPARED":
-                return payment_pb2.CommitResponse(
-                    success=False,
-                    error_message=f"Transaction not in PREPARED state: {transaction['status']}",
-                )
-
-            # Update status
-            transaction["status"] = "COMMITTING"
-
-        print(f"Committing payment for transaction {transaction_id}")
-
-        # Simulate payment processing
-        # 98% success rate
-        # success = random.random() < 0.0001
-
-        # TODO: check this
-        success = True
-
-        # Update transaction status
-        with self._transaction_lock:
-            if transaction_id in self.transactions:
-                if success:
-                    self.transactions[transaction_id]["status"] = "COMMITTED"
-                    self.transactions[transaction_id]["confirmation_code"] = (
-                        f"PAY-{uuid.uuid4().hex[:8].upper()}"
-                    )
-                    self.transactions[transaction_id]["commit_time"] = time.time()
-                else:
-                    self.transactions[transaction_id]["status"] = "FAILED"
-                    self.transactions[transaction_id]["error"] = (
-                        "Payment processing failed"
-                    )
-
-        if success:
-            # Get transaction details
+            # Check if transaction exists and validate state
             with self._transaction_lock:
                 if transaction_id not in self.transactions:
+                    print(f"[Payment] Transaction {transaction_id} not found")
                     return payment_pb2.CommitResponse(
                         success=False, error_message="Transaction not found"
                     )
 
                 transaction = self.transactions[transaction_id]
 
+                # Verify payment ID matches
                 if transaction["payment_id"] != payment_id:
+                    print(
+                        f"[Payment] Invalid payment ID for transaction {transaction_id}"
+                    )
                     return payment_pb2.CommitResponse(
                         success=False, error_message="Invalid payment ID"
                     )
 
+                # Check if transaction is in PREPARED state
                 if transaction["status"] != "PREPARED":
+                    error_msg = (
+                        f"Transaction not in PREPARED state: {transaction['status']}"
+                    )
+                    print(f"[Payment] {error_msg} for transaction {transaction_id}")
                     return payment_pb2.CommitResponse(
-                        success=False,
-                        error_message=f"Transaction not in PREPARED state: {transaction['status']}",
+                        success=False, error_message=error_msg
                     )
 
+                # Update status to COMMITTING to prevent double processing
                 transaction["status"] = "COMMITTING"
+                print(
+                    f"[Payment] Transaction {transaction_id} status set to COMMITTING"
+                )
 
-            print(f"Committing payment for transaction {transaction_id}")
-
+            # Simulate payment processing (98% success rate for demo)
             success = random.random() < 0.98
             payment_counter.add(1, {"status": "committed" if success else "failed"})
 
+            # Update final transaction status
             with self._transaction_lock:
-                if success:
-                    transaction["status"] = "COMMITTED"
-                    transaction["confirmation_code"] = (
-                        f"PAY-{uuid.uuid4().hex[:8].upper()}"
-                    )
-                    transaction["commit_time"] = time.time()
-                else:
-                    transaction["status"] = "FAILED"
-                    transaction["error"] = "Payment processing failed"
+                if transaction_id in self.transactions:
+                    if success:
+                        self.transactions[transaction_id]["status"] = "COMMITTED"
+                        self.transactions[transaction_id]["confirmation_code"] = (
+                            f"PAY-{uuid.uuid4().hex[:8].upper()}"
+                        )
+                        self.transactions[transaction_id]["commit_time"] = time.time()
+                        print(
+                            f"[Payment] Transaction {transaction_id} committed successfully"
+                        )
+                    else:
+                        self.transactions[transaction_id]["status"] = "FAILED"
+                        self.transactions[transaction_id]["error"] = (
+                            "Payment processing failed"
+                        )
+                        print(f"[Payment] Transaction {transaction_id} commit failed")
 
             if success:
-                transaction = self.transactions[transaction_id]
-                payment_result = payment_pb2.PaymentResult(
-                    payment_id=payment_id,
-                    amount=transaction["amount"],
-                    payment_method=transaction["payment_method"],
-                    status="COMPLETED",
-                    confirmation_code=transaction["confirmation_code"],
-                    timestamp=int(transaction["commit_time"]),
-                )
+                # Return successful payment result
+                with self._transaction_lock:
+                    transaction = self.transactions[transaction_id]
+                    payment_result = payment_pb2.PaymentResult(
+                        payment_id=payment_id,
+                        amount=transaction["amount"],
+                        payment_method=transaction["payment_method"],
+                        status="COMPLETED",
+                        confirmation_code=transaction["confirmation_code"],
+                        timestamp=int(transaction["commit_time"]),
+                    )
+
                 return payment_pb2.CommitResponse(
                     success=True, payment_result=payment_result
                 )
@@ -229,14 +208,13 @@ class PaymentService(payment_pb2_grpc.PaymentServiceServicer):
             transaction_id = request.transaction_id
             reason = request.reason
 
-            print(f"Aborting payment for transaction {transaction_id}: {reason}")
+            print(f"[Payment] Aborting transaction {transaction_id}: {reason}")
 
             with self._transaction_lock:
                 if transaction_id in self.transactions:
                     self.transactions[transaction_id]["status"] = "ABORTED"
                     self.transactions[transaction_id]["abort_reason"] = reason
                     self.transactions[transaction_id]["abort_time"] = time.time()
-
                     return payment_pb2.AbortResponse(
                         success=True, message=f"Transaction {transaction_id} aborted"
                     )

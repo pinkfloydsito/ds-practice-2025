@@ -1,6 +1,16 @@
 import grpc
 import logging
 
+import os
+import sys
+
+FILE = __file__ if "__file__" in globals() else os.getenv("PYTHONFILE", "")
+tracing_path = os.path.abspath(os.path.join(FILE, f"../../../utils/tracing"))
+sys.path.insert(0, tracing_path)
+
+from trace_propagation import TracingInterceptor
+
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -12,6 +22,8 @@ class GrpcClientFactory:
 
         # Default timeout for all calls XXX: move this to the docker compose as env variable
         self.default_timeout = 5
+
+        self.tracing_interceptor = TracingInterceptor()
 
     def get_channel(self, service_name, host=None, port=None, secure=True):
         """Get or create a channel for a service"""
@@ -34,7 +46,9 @@ class GrpcClientFactory:
                 credentials = grpc.ssl_channel_credentials()
                 self._channels[service_id] = grpc.secure_channel(address, credentials)
             else:
-                self._channels[service_id] = grpc.insecure_channel(address)
+                self._channels[service_id] = grpc.intercept_channel(
+                    grpc.insecure_channel(address), self.tracing_interceptor
+                )
 
             # LOGGER.info(f"Created new gRPC channel for {service_id}")
             print(f"Created new gRPC channel for {service_id}")
