@@ -6,7 +6,7 @@ from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Opti
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class PrepareRequest(_message.Message):
-    __slots__ = ("transaction_id", "amount", "payment_method", "customer_id", "metadata")
+    __slots__ = ("transaction_id", "amount", "payment_method", "customer_id", "metadata", "order_id")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -19,12 +19,14 @@ class PrepareRequest(_message.Message):
     PAYMENT_METHOD_FIELD_NUMBER: _ClassVar[int]
     CUSTOMER_ID_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     transaction_id: str
     amount: float
     payment_method: str
     customer_id: str
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, transaction_id: _Optional[str] = ..., amount: _Optional[float] = ..., payment_method: _Optional[str] = ..., customer_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    order_id: str
+    def __init__(self, transaction_id: _Optional[str] = ..., amount: _Optional[float] = ..., payment_method: _Optional[str] = ..., customer_id: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., order_id: _Optional[str] = ...) -> None: ...
 
 class PrepareResponse(_message.Message):
     __slots__ = ("can_commit", "error_message", "payment_id")
@@ -37,12 +39,14 @@ class PrepareResponse(_message.Message):
     def __init__(self, can_commit: bool = ..., error_message: _Optional[str] = ..., payment_id: _Optional[str] = ...) -> None: ...
 
 class CommitRequest(_message.Message):
-    __slots__ = ("transaction_id", "payment_id")
+    __slots__ = ("transaction_id", "payment_id", "order_id")
     TRANSACTION_ID_FIELD_NUMBER: _ClassVar[int]
     PAYMENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ORDER_ID_FIELD_NUMBER: _ClassVar[int]
     transaction_id: str
     payment_id: str
-    def __init__(self, transaction_id: _Optional[str] = ..., payment_id: _Optional[str] = ...) -> None: ...
+    order_id: str
+    def __init__(self, transaction_id: _Optional[str] = ..., payment_id: _Optional[str] = ..., order_id: _Optional[str] = ...) -> None: ...
 
 class CommitResponse(_message.Message):
     __slots__ = ("success", "error_message", "payment_result")

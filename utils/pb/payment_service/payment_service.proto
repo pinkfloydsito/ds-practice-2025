@@ -23,6 +23,7 @@ message PrepareRequest {
   string payment_method = 3;
   string customer_id = 4;
   map<string, string> metadata = 5;
+  string order_id = 6;
 }
 
 message PrepareResponse {
@@ -35,6 +36,7 @@ message PrepareResponse {
 message CommitRequest {
   string transaction_id = 1;
   string payment_id = 2;
+  string order_id = 3;
 }
 
 message CommitResponse {

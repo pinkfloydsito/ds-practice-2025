@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15payment_service.proto\x12\x07payment\"\xcf\x01\n\x0ePrepareRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x16\n\x0epayment_method\x18\x03 \x01(\t\x12\x13\n\x0b\x63ustomer_id\x18\x04 \x01(\t\x12\x37\n\x08metadata\x18\x05 \x03(\x0b\x32%.payment.PrepareRequest.MetadataEntry\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"P\n\x0fPrepareResponse\x12\x12\n\ncan_commit\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12\x12\n\npayment_id\x18\x03 \x01(\t\";\n\rCommitRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x12\n\npayment_id\x18\x02 \x01(\t\"h\n\x0e\x43ommitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12.\n\x0epayment_result\x18\x03 \x01(\x0b\x32\x16.payment.PaymentResult\"\x89\x01\n\rPaymentResult\x12\x12\n\npayment_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x16\n\x0epayment_method\x18\x03 \x01(\t\x12\x0e\n\x06status\x18\x04 \x01(\t\x12\x19\n\x11\x63onfirmation_code\x18\x05 \x01(\t\x12\x11\n\ttimestamp\x18\x06 \x01(\x03\"J\n\x0c\x41\x62ortRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x12\n\npayment_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\"1\n\rAbortResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\'\n\rStatusRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\"\xa1\x01\n\x0eStatusResponse\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x12\n\npayment_id\x18\x03 \x01(\t\x12\x0e\n\x06\x61mount\x18\x04 \x01(\x01\x12\x16\n\x0epayment_method\x18\x05 \x01(\t\x12\x14\n\x0clast_updated\x18\x06 \x01(\x03\x12\x15\n\rerror_message\x18\x07 \x01(\t2\xff\x01\n\x0ePaymentService\x12<\n\x07Prepare\x12\x17.payment.PrepareRequest\x1a\x18.payment.PrepareResponse\x12\x39\n\x06\x43ommit\x12\x16.payment.CommitRequest\x1a\x17.payment.CommitResponse\x12\x36\n\x05\x41\x62ort\x12\x15.payment.AbortRequest\x1a\x16.payment.AbortResponse\x12<\n\tGetStatus\x12\x16.payment.StatusRequest\x1a\x17.payment.StatusResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15payment_service.proto\x12\x07payment\"\xe1\x01\n\x0ePrepareRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x16\n\x0epayment_method\x18\x03 \x01(\t\x12\x13\n\x0b\x63ustomer_id\x18\x04 \x01(\t\x12\x37\n\x08metadata\x18\x05 \x03(\x0b\x32%.payment.PrepareRequest.MetadataEntry\x12\x10\n\x08order_id\x18\x06 \x01(\t\x1a/\n\rMetadataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"P\n\x0fPrepareResponse\x12\x12\n\ncan_commit\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12\x12\n\npayment_id\x18\x03 \x01(\t\"M\n\rCommitRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x12\n\npayment_id\x18\x02 \x01(\t\x12\x10\n\x08order_id\x18\x03 \x01(\t\"h\n\x0e\x43ommitResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x15\n\rerror_message\x18\x02 \x01(\t\x12.\n\x0epayment_result\x18\x03 \x01(\x0b\x32\x16.payment.PaymentResult\"\x89\x01\n\rPaymentResult\x12\x12\n\npayment_id\x18\x01 \x01(\t\x12\x0e\n\x06\x61mount\x18\x02 \x01(\x01\x12\x16\n\x0epayment_method\x18\x03 \x01(\t\x12\x0e\n\x06status\x18\x04 \x01(\t\x12\x19\n\x11\x63onfirmation_code\x18\x05 \x01(\t\x12\x11\n\ttimestamp\x18\x06 \x01(\x03\"J\n\x0c\x41\x62ortRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x12\n\npayment_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\"1\n\rAbortResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\'\n\rStatusRequest\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\"\xa1\x01\n\x0eStatusResponse\x12\x16\n\x0etransaction_id\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x12\n\npayment_id\x18\x03 \x01(\t\x12\x0e\n\x06\x61mount\x18\x04 \x01(\x01\x12\x16\n\x0epayment_method\x18\x05 \x01(\t\x12\x14\n\x0clast_updated\x18\x06 \x01(\x03\x12\x15\n\rerror_message\x18\x07 \x01(\t2\xff\x01\n\x0ePaymentService\x12<\n\x07Prepare\x12\x17.payment.PrepareRequest\x1a\x18.payment.PrepareResponse\x12\x39\n\x06\x43ommit\x12\x16.payment.CommitRequest\x1a\x17.payment.CommitResponse\x12\x36\n\x05\x41\x62ort\x12\x15.payment.AbortRequest\x1a\x16.payment.AbortResponse\x12<\n\tGetStatus\x12\x16.payment.StatusRequest\x1a\x17.payment.StatusResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,25 +34,25 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PREPAREREQUEST_METADATAENTRY']._loaded_options = None
   _globals['_PREPAREREQUEST_METADATAENTRY']._serialized_options = b'8\001'
   _globals['_PREPAREREQUEST']._serialized_start=35
-  _globals['_PREPAREREQUEST']._serialized_end=242
-  _globals['_PREPAREREQUEST_METADATAENTRY']._serialized_start=195
-  _globals['_PREPAREREQUEST_METADATAENTRY']._serialized_end=242
-  _globals['_PREPARERESPONSE']._serialized_start=244
-  _globals['_PREPARERESPONSE']._serialized_end=324
-  _globals['_COMMITREQUEST']._serialized_start=326
-  _globals['_COMMITREQUEST']._serialized_end=385
-  _globals['_COMMITRESPONSE']._serialized_start=387
-  _globals['_COMMITRESPONSE']._serialized_end=491
-  _globals['_PAYMENTRESULT']._serialized_start=494
-  _globals['_PAYMENTRESULT']._serialized_end=631
-  _globals['_ABORTREQUEST']._serialized_start=633
-  _globals['_ABORTREQUEST']._serialized_end=707
-  _globals['_ABORTRESPONSE']._serialized_start=709
-  _globals['_ABORTRESPONSE']._serialized_end=758
-  _globals['_STATUSREQUEST']._serialized_start=760
-  _globals['_STATUSREQUEST']._serialized_end=799
-  _globals['_STATUSRESPONSE']._serialized_start=802
-  _globals['_STATUSRESPONSE']._serialized_end=963
-  _globals['_PAYMENTSERVICE']._serialized_start=966
-  _globals['_PAYMENTSERVICE']._serialized_end=1221
+  _globals['_PREPAREREQUEST']._serialized_end=260
+  _globals['_PREPAREREQUEST_METADATAENTRY']._serialized_start=213
+  _globals['_PREPAREREQUEST_METADATAENTRY']._serialized_end=260
+  _globals['_PREPARERESPONSE']._serialized_start=262
+  _globals['_PREPARERESPONSE']._serialized_end=342
+  _globals['_COMMITREQUEST']._serialized_start=344
+  _globals['_COMMITREQUEST']._serialized_end=421
+  _globals['_COMMITRESPONSE']._serialized_start=423
+  _globals['_COMMITRESPONSE']._serialized_end=527
+  _globals['_PAYMENTRESULT']._serialized_start=530
+  _globals['_PAYMENTRESULT']._serialized_end=667
+  _globals['_ABORTREQUEST']._serialized_start=669
+  _globals['_ABORTREQUEST']._serialized_end=743
+  _globals['_ABORTRESPONSE']._serialized_start=745
+  _globals['_ABORTRESPONSE']._serialized_end=794
+  _globals['_STATUSREQUEST']._serialized_start=796
+  _globals['_STATUSREQUEST']._serialized_end=835
+  _globals['_STATUSRESPONSE']._serialized_start=838
+  _globals['_STATUSRESPONSE']._serialized_end=999
+  _globals['_PAYMENTSERVICE']._serialized_start=1002
+  _globals['_PAYMENTSERVICE']._serialized_end=1257
 # @@protoc_insertion_point(module_scope)
